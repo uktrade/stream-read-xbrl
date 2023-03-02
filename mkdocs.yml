@@ -1,0 +1,29 @@
+site_name: stream-read-xbrl
+repo_name: uktrade/stream-read-xbrl
+repo_url: https://github.com/uktrade/stream-read-xbrl
+theme:
+  name: tech_docs_template
+  logo: assets/dit-logo.png
+  favicon: assets/dit-favicon.png
+  features:
+    - content.code.copy
+    - navigation.sections
+extra_css:
+  - assets/dit-extra.css
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+plugins:
+  - material/search
+nav:
+    - Introduction: 'index.md'
+    - Usage:
+      - Getting started: 'getting-started.md'
+      - Exceptions: 'exceptions.md'
+    - Contributing:
+      - How to contribute: 'contributing.md'
