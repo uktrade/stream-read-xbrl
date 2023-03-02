@@ -9,9 +9,6 @@ Python package to parse Companies House accounts data in a streaming way. This a
 
 
 <!-- --8<-- [start:features] -->
-## Features
-
-
 <!-- --8<-- [end:features] -->
 
 ---
