@@ -213,7 +213,7 @@ class XBRLParser():
         + [key for key in PERIODICAL_XPATH_MAPPINGS.keys()]
     )
 
-    def xbrl_to_tsv(self, xbrl_file):
+    def xbrl_to_rows(self, xbrl_file):
         document = etree.parse(xbrl_file, etree.XMLParser(ns_clean=True))
         contexts = self._get_contexts(document)
         value_by_period = OrderedDict()
@@ -230,7 +230,6 @@ class XBRLParser():
         mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
         run_code, company_id, date, filetype = mo.groups()
 
-        results = []
         for period, row in value_by_period.items():
             row[self.columns.index('run_code')] = run_code
             row[self.columns.index('company_id')] = company_id
@@ -248,8 +247,7 @@ class XBRLParser():
             row[self.columns.index('period_end')] = period[1]
             for attribute in self.GENERAL_XPATH_MAPPINGS:
                 self._populate_general_attributes(document, attribute, row)
-            results.append(row)
-        return ['\t'.join(r) + '\n' for r in results]
+            yield row
 
     def _populate_general_attributes(self, document, attribute, row):
         xpath_expressions = self.GENERAL_XPATH_MAPPINGS.get(attribute)[0]
@@ -378,6 +376,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 
     def rows():
         for name, _, chunks in stream_unzip(zip_bytes_iter):
-            yield from XBRLParser().xbrl_to_tsv(to_file_like_obj(name.decode(), chunks))
+            yield from XBRLParser().xbrl_to_rows(to_file_like_obj(name.decode(), chunks))
 
-    return tuple(XBRLParser.columns), (row.split('\t') for row in rows())
+    return tuple(XBRLParser.columns), rows()
