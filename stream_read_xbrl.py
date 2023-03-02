@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 from collections import OrderedDict
+from io import BytesIO
 
 import dateutil
 import dateutil.parser
@@ -213,8 +214,8 @@ class XBRLParser():
         + [key for key in PERIODICAL_XPATH_MAPPINGS.keys()]
     )
 
-    def xbrl_to_rows(self, xbrl_file):
-        document = etree.parse(xbrl_file, etree.XMLParser(ns_clean=True))
+    def xbrl_to_rows(self, name, xbrl_xml_str):
+        document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
         contexts = self._get_contexts(document)
         value_by_period = OrderedDict()
 
@@ -226,7 +227,7 @@ class XBRLParser():
         if not value_by_period:
             value_by_period[('None', 'None')] = ['None'] * len(self.columns)
 
-        fn = os.path.basename(xbrl_file.name)
+        fn = os.path.basename(name)
         mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
         run_code, company_id, date, filetype = mo.groups()
 
@@ -342,40 +343,8 @@ class XBRLParser():
 
 def stream_read_xbrl_zip(zip_bytes_iter):
 
-    def to_file_like_obj(name, bytes_iter):
-        chunk = b''
-        offset = 0
-        it = iter(bytes_iter)
-
-        def up_to_iter(size):
-            nonlocal chunk, offset
-
-            while size:
-                if offset == len(chunk):
-                    try:
-                        chunk = next(it)
-                    except StopIteration:
-                        break
-                    else:
-                        offset = 0
-                to_yield = min(size, len(chunk) - offset)
-                offset = offset + to_yield
-                size -= to_yield
-                yield chunk[offset - to_yield:offset]
-
-        class FileLikeObj:
-            @property
-            def name(self):
-                return name
-
-            def read(self, size=-1):
-                return b''.join(up_to_iter(float('inf') if size is None or size < 0 else size))
-
-        return FileLikeObj()
-
-
     def rows():
         for name, _, chunks in stream_unzip(zip_bytes_iter):
-            yield from XBRLParser().xbrl_to_rows(to_file_like_obj(name.decode(), chunks))
+            yield from XBRLParser().xbrl_to_rows(name.decode(), BytesIO(b''.join(chunks)))
 
     return tuple(XBRLParser.columns), rows()
