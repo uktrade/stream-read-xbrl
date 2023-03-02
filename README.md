@@ -1,7 +1,7 @@
 <!-- --8<-- [start:intro] -->
 # stream-read-xbrl
 
-[![PyPI version](https://badge.fury.io/py/stream-unzip.svg)](https://pypi.org/project/stream-unzip/) [![CircleCI](https://circleci.com/gh/uktrade/stream-unzip.svg?style=shield)](https://circleci.com/gh/uktrade/stream-unzip) [![Test Coverage](https://api.codeclimate.com/v1/badges/02144f986cd3eecf4a0b/test_coverage)](https://codeclimate.com/github/uktrade/stream-unzip/test_coverage)
+[![PyPI version](https://badge.fury.io/py/stream-unzip.svg)](https://pypi.org/project/stream-unzip/) [![Tests](https://github.com/uktrade/stream-read-xbrl/actions/workflows/tests.yml/badge.svg)](https://github.com/uktrade/stream-read-xbrl/actions/workflows/tests.yml) [![Test Coverage](https://api.codeclimate.com/v1/badges/02144f986cd3eecf4a0b/test_coverage)](https://codeclimate.com/github/uktrade/stream-unzip/test_coverage)
 
 Python package to parse Companies House accounts data in a streaming way
 <!-- --8<-- [end:intro] -->
