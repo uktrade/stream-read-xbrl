@@ -1,7 +1,7 @@
 ## Prerequisites
 
 Python 3.5+
-
+stream-unzip
 
 ## Installation
 
@@ -18,24 +18,31 @@ If you regularly install stream-read-xbrl, such as during application deployment
 
 ## Usage
 
-### OLD CONTENT KEPT FOR REFERENCE
-A single function is exposed, `stream_unzip`, that takes a single argument: an iterable that should yield the bytes of a ZIP file [with no zero-length chunks]. It returns an iterable, where each yielded item is a tuple of the file name, file size [`None` if this is not known], and another iterable itself yielding the unzipped bytes of that file.
+A single function is exposed, `stream_read_xbrl_unzip`, that takes a single argument: an iterable that should yield the bytes of a ZIP file of Companies Accounts data [with no zero-length chunks]. It returns a tuple of column names, along an iterable yielding the rows of the data. The `stream-unzip` function is used to unzip the ZIP files which are then parsed by the `XBLRParser` function, resulting in the values returned.
 
+### Basic Example
 ```python
-from stream_unzip import stream_unzip
 import httpx
+from stream_read_xbrl import stream_read_xbrl_zip
 
-def zipped_chunks():
-    # Iterable that yields the bytes of a zip file
-    with httpx.stream('GET', 'https://www.example.com/my.zip') as r:
-        yield from r.iter_bytes(chunk_size=65536)
-
-for file_name, file_size, unzipped_chunks in stream_unzip(zipped_chunks(), password=b'my-password'):
-    # unzipped_chunks must be iterated to completion or UnfinishedIterationError will be raised
-    for chunk in unzipped_chunks:
-        print(chunk)
+url = 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip'
+with httpx.stream('GET', url) as r:
+    columns, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
+    for row in row:
+        print(row)
 ```
 
-The file name and file size are extracted as reported from the file. If you don't trust the creator of the ZIP file, these should be treated as untrusted input.
+### Pandas DataFrames Example
 
-### END OF OLD CONTENT
+This example will load the data from the entire file into memory at once and is not really streaming. 
+```python
+import httpx
+from stream_read_xbrl import stream_read_xbrl_zip
+
+url = 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip'
+with httpx.stream('GET', url) as r:
+    columns, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
+    df = pd.DataFrame(rows, columns=columns)
+
+print(df)
+```
