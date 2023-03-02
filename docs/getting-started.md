@@ -1,7 +1,6 @@
 ## Prerequisites
 
-Python 3.5+
-stream-unzip
+Python 3.7+
 
 ## Installation
 
