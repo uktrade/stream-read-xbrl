@@ -4,8 +4,14 @@
 #
 #    pip-compile
 #
+lxml==4.9.2
+    # via -r requirements.in
 pycryptodome==3.17
     # via stream-unzip
+python-dateutil==2.8.2
+    # via -r requirements.in
+six==1.16.0
+    # via python-dateutil
 stream-inflate==0.0.14
     # via stream-unzip
 stream-unzip==0.0.83
