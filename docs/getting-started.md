@@ -17,7 +17,7 @@ If you regularly install stream-read-xbrl, such as during application deployment
 
 ## Usage
 
-A single function is exposed, `stream_read_xbrl_unzip`, that takes a single argument: an iterable that should yield the bytes of a ZIP file of Companies Accounts data [with no zero-length chunks]. It returns a tuple of column names, along an iterable yielding the rows of the data. The `stream-unzip` function is used to unzip the ZIP files which are then parsed by the `XBLRParser` function, resulting in the values returned.
+A single function is exposed, `stream_read_xbrl_unzip`, that takes a single argument: an iterable that should yield the bytes of a ZIP file of Companies Accounts data [with no zero-length chunks]. It returns a tuple of column names, along an iterable yielding the rows of the data.
 
 ### Basic Example
 ```python
