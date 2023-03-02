@@ -2,7 +2,10 @@ import re
 
 import httpx
 
-from stream_read_xbrl import stream_read_xbrl_zip
+from stream_read_xbrl import (
+    stream_read_xbrl_zip,
+    stream_read_xbrl_daily_all,
+)
 
 expected_columns = (
     'run_code',
@@ -59,3 +62,18 @@ def test_stream_read_xbrl_zip():
                 break
 
         assert count > 1
+
+
+def test_stream_read_xbrl_daily_all():
+    count = 0
+
+    with stream_read_xbrl_daily_all() as (columns, rows):
+        for row in rows:
+            count += 1
+            assert len(row) == len(columns)
+            row_dict = dict(zip(columns, row))
+            assert re.match(r'(\d{8})|([A-Z]{2}\d{6})', row_dict['company_id'])
+            if count >= 1000:
+                break
+
+    assert count > 1

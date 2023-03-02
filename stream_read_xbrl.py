@@ -1,11 +1,15 @@
 import datetime
 import os
 import re
+import urllib.parse
 from collections import OrderedDict
+from contextlib import contextmanager
 from io import BytesIO
 
 import dateutil
 import dateutil.parser
+from bs4 import BeautifulSoup
+import httpx
 from lxml import etree
 from lxml.etree import XMLSyntaxError
 from stream_unzip import stream_unzip
@@ -348,3 +352,26 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             yield from XBRLParser().xbrl_to_rows(name.decode(), BytesIO(b''.join(chunks)))
 
     return tuple(XBRLParser.columns), rows()
+
+
+@contextmanager
+def stream_read_xbrl_daily_all(
+    url='http://download.companieshouse.gov.uk/en_accountsdata.html',
+    get_client=lambda: httpx.Client(transport=httpx.HTTPTransport(retries=3)),
+):
+    with get_client() as client:
+        all_links = BeautifulSoup(httpx.get(url).content, "html.parser").find_all('a')
+        zip_urls = [
+            link.attrs['href'] if link.attrs['href'].strip().startswith('http://') or link.attrs['href'].strip().startswith('https://') else
+            urllib.parse.urljoin(url, link.attrs['href'])
+            for link in all_links
+            if link.attrs.get('href', '').endswith('.zip')
+        ]
+
+        def rows():
+            for zip_url in zip_urls:
+                with client.stream('GET', zip_url) as r:
+                    _, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
+                    yield from rows
+
+        yield tuple(XBRLParser.columns), rows()
