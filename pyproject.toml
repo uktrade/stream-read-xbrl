@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stream-read-xbrl"
+version = "0.0.0"
+authors = [
+  { name="Department for International Trade", email="sre@digital.trade.gov.uk" },
+]
+description = "Python package to parse Companies House accounts data in a streaming way"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "stream-unzip>=0.0.83",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.2.1",
+    "pytest-cov>=4.0.0",
+    "httpx>=0.23.3",
+]
+
+[project.urls]
+"Documentation" = "https://stream-read-xbrl.docs.data.trade.gov.uk/"
+"Source" = "https://github.com/uktrade/stream-read-xbrl"
+
+[tool.hatch.build]
+include = [
+  "stream_read_xbrl.py"
+]
