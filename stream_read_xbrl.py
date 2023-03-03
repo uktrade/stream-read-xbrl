@@ -444,4 +444,7 @@ def stream_read_xbrl_daily_all(
                     _, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
                     yield from rows
 
-        yield tuple(XBRLParser.columns), rows()
+        # Allows us to get the columns before actually iterating the real data
+        columns, _ = stream_read_xbrl_zip(())
+
+        yield columns, rows()
