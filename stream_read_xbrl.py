@@ -49,11 +49,17 @@ class XBRLParser():
     #   attribute_type: type used to parse the attribute value
     GENERAL_XPATH_MAPPINGS = {
         'balance_sheet_date': (
-            [_av('BalanceSheetDate'), _en('BalanceSheetDate')],
+            [
+                _av('BalanceSheetDate'),
+                _en('BalanceSheetDate'),
+            ],
             datetime.date,
         ),
         'companies_house_registered_number': (
-            [_av('UKCompaniesHouseRegisteredNumber'), _en('CompaniesHouseRegisteredNumber')],
+            [
+                _av('UKCompaniesHouseRegisteredNumber'),
+                _en('CompaniesHouseRegisteredNumber'),
+            ],
             str,
         ),
         'entity_current_legal_name': (
@@ -91,12 +97,32 @@ class XBRLParser():
     PERIODICAL_XPATH_MAPPINGS = {
         # balance sheet
         'tangible_fixed_assets': (
-            [_en_av('FixedAssets'), _en_av('TangibleFixedAssets'), _av('PropertyPlantEquipment')],
+            [
+                _en_av('FixedAssets'),
+                _en_av('TangibleFixedAssets'),
+                _av('PropertyPlantEquipment'),
+            ],
             float,
         ),
-        'debtors': ([_en_av('Debtors')], float),
-        'cash_bank_in_hand': ([_en_av('CashBankInHand'), _av('CashBankOnHand')], float),
-        'current_assets': ([_en_av('CurrentAssets')], float),
+        'debtors': (
+            [
+                _en_av('Debtors'),
+            ],
+            float,
+        ),
+        'cash_bank_in_hand': (
+            [
+                _en_av('CashBankInHand'),
+                _av('CashBankOnHand'),
+            ],
+            float,
+        ),
+        'current_assets': (
+            [
+                _en_av('CurrentAssets'),
+            ],
+            float,
+        ),
         'creditors_due_within_one_year': (
             [
                 _av('CreditorsDueWithinOneYear'),
@@ -118,11 +144,15 @@ class XBRLParser():
             float,
         ),
         'net_current_assets_liabilities': (
-            [_en_av('NetCurrentAssetsLiabilities')],
+            [
+                _en_av('NetCurrentAssetsLiabilities'),
+            ],
             float,
         ),
         'total_assets_less_current_liabilities': (
-            [_en_av('TotalAssetsLessCurrentLiabilities')],
+            [
+                _en_av('TotalAssetsLessCurrentLiabilities'),
+            ],
             float,
         ),
         'net_assets_liabilities_including_pension_asset_liability': (
@@ -164,22 +194,49 @@ class XBRLParser():
         ),
         # income statement
         'turnover_gross_operating_revenue': (
-            [_en_av('TurnoverGrossOperatingRevenue'), _en_av('TurnoverRevenue')],
+            [
+                _en_av('TurnoverGrossOperatingRevenue'),
+                _en_av('TurnoverRevenue'),
+            ],
             float,
         ),
         'other_operating_income': (
-            [_en_av('OtherOperatingIncome'), _en_av('OtherOperatingIncomeFormat2')],
+            [
+                _en_av('OtherOperatingIncome'),
+                _en_av('OtherOperatingIncomeFormat2'),
+            ],
             float,
         ),
-        'cost_sales': ([_en_av('CostSales')], float),
-        'gross_profit_loss': ([_en_av('GrossProfitLoss')], float),
-        'administrative_expenses': ([_en_av('AdministrativeExpenses')], float),
+        'cost_sales': (
+            [
+                _en_av('CostSales'),
+            ],
+            float,
+        ),
+        'gross_profit_loss': (
+            [
+                _en_av('GrossProfitLoss'),
+            ],
+            float,
+        ),
+        'administrative_expenses': (
+            [
+                _en_av('AdministrativeExpenses'),
+            ],
+            float,
+        ),
         'raw_materials_consumables': (
-            [_en_av('RawMaterialsConsumables'), _en_av('RawMaterialsConsumablesUsed')],
+            [
+                _en_av('RawMaterialsConsumables'),
+                _en_av('RawMaterialsConsumablesUsed'),
+            ],
             float,
         ),
         'staff_costs': (
-            [_en_av('StaffCosts'), _en_av('StaffCostsEmployeeBenefitsExpense')],
+            [
+                _en_av('StaffCosts'),
+                _en_av('StaffCostsEmployeeBenefitsExpense'),
+            ],
             float,
         ),
         'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets': (
@@ -190,12 +247,22 @@ class XBRLParser():
             float,
         ),
         'other_operating_charges_format2': (
-            [_en_av('OtherOperatingChargesFormat2'), _en_av('OtherOperatingExpensesFormat2')],
+            [
+                _en_av('OtherOperatingChargesFormat2'),
+                _en_av('OtherOperatingExpensesFormat2'),
+            ],
             float,
         ),
-        'operating_profit_loss': ([_en_av('OperatingProfitLoss')], float),
+        'operating_profit_loss': (
+            [
+                _en_av('OperatingProfitLoss'),
+            ],
+            float,
+        ),
         'profit_loss_on_ordinary_activities_before_tax': (
-            [_en_av('ProfitLossOnOrdinaryActivitiesBeforeTax')],
+            [
+                _en_av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
+            ],
             float,
         ),
         'tax_on_profit_or_loss_on_ordinary_activities': (
@@ -206,7 +273,10 @@ class XBRLParser():
             float,
         ),
         'profit_loss_for_period': (
-            [_en_av('ProfitLoss'), _en_av('ProfitLossForPeriod')],
+            [
+                _en_av('ProfitLoss'),
+                _en_av('ProfitLossForPeriod'),
+            ],
             float,
         ),
     }
