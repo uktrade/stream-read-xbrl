@@ -229,7 +229,7 @@ class XBRLParser():
 
         # if no periodical attributes found, create empty row for general attributes
         if not value_by_period:
-            value_by_period[('None', 'None')] = ['None'] * len(self.columns)
+            value_by_period[(None, None)] = [None] * len(self.columns)
 
         fn = os.path.basename(name)
         mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
@@ -238,7 +238,7 @@ class XBRLParser():
         for period, row in value_by_period.items():
             row[self.columns.index('run_code')] = run_code
             row[self.columns.index('company_id')] = company_id
-            row[self.columns.index('date')] = date
+            row[self.columns.index('date')] = dateutil.parser.parse(date).date()
             row[self.columns.index('file_type')] = filetype
             allowed_taxonomies = [
                 'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
@@ -248,8 +248,8 @@ class XBRLParser():
             row[self.columns.index('taxonomy')] = ';'.join(
                 set(allowed_taxonomies) & set(document.getroot().nsmap.values())
             )
-            row[self.columns.index('period_start')] = period[0]
-            row[self.columns.index('period_end')] = period[1]
+            row[self.columns.index('period_start')] = None if period[0] is None else dateutil.parser.parse(period[0]).date()
+            row[self.columns.index('period_end')] = None if period[1] is None else dateutil.parser.parse(period[1]).date()
             for attribute in self.GENERAL_XPATH_MAPPINGS:
                 self._populate_general_attributes(document, attribute, row)
             yield row
@@ -258,7 +258,7 @@ class XBRLParser():
         xpath_expressions = self.GENERAL_XPATH_MAPPINGS.get(attribute)[0]
         for xpath in xpath_expressions:
             # retrieve value only if not found already
-            if row[self.columns.index(attribute)] == 'None':
+            if row[self.columns.index(attribute)] == None:
                 for e in document.xpath(xpath):
                     attr_type = self._get_attribute_type(
                         self.GENERAL_XPATH_MAPPINGS, attribute, xpath
@@ -277,9 +277,9 @@ class XBRLParser():
                     context = contexts[context_ref_attr[0]]
                     if context is not None:
                         dates = self._get_dates(context)
-                        if dates != ('None', 'None'):
+                        if dates != (None, None):
                             if dates not in value_by_period:  # create new row
-                                values = ['None'] * len(self.columns)
+                                values = [None] * len(self.columns)
                                 values[self.columns.index(attribute)] = self._get_value(
                                     e, attr_type
                                 )
@@ -287,7 +287,7 @@ class XBRLParser():
                             else:  # update row
                                 values = value_by_period[dates]
                                 # retrieve value only if not found already
-                                if values[self.columns.index(attribute)] == 'None':
+                                if values[self.columns.index(attribute)] == None:
                                     values[self.columns.index(attribute)] = self._get_value(
                                         e, attr_type
                                     )
@@ -304,7 +304,7 @@ class XBRLParser():
     @staticmethod
     def _get_dates(context):
         if context is None:
-            return 'None', 'None'
+            return None, None
         instant = context.xpath("./*[local-name()='instant']")
         if instant:
             v = instant[0].text
@@ -313,7 +313,7 @@ class XBRLParser():
             start_date = context.xpath("./*[local-name()='startDate']/text()")[0]
             end_date = context.xpath("./*[local-name()='endDate']/text()")[0]
             if start_date is None or end_date is None:
-                return 'None', 'None'
+                return None, None
             return start_date, end_date
 
     @staticmethod
