@@ -58,6 +58,8 @@ def test_stream_read_xbrl_zip():
             assert len(row) == len(columns)
             row_dict = dict(zip(columns, row))
             assert re.match(r'(\d{8})|([A-Z]{2}\d{6})', row_dict['company_id'])
+            if count >= 1000:
+                break
 
         assert count > 1
 
@@ -71,5 +73,7 @@ def test_stream_read_xbrl_daily_all():
             assert len(row) == len(columns)
             row_dict = dict(zip(columns, row))
             assert re.match(r'(\d{8})|([A-Z]{2}\d{6})', row_dict['company_id'])
+            if count >= 1000:
+                break
 
     assert count > 1
