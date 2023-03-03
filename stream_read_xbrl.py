@@ -22,16 +22,16 @@ def stream_read_xbrl_zip(zip_bytes_iter):
     def _element_has_name(name):
         return f"//*[local-name()='{name}']"
 
-    def _element_has_attr_value(attr_value, attr_name='name'):
+    def _element_has_attr_value(attr_value):
         return (
-            f"//*[contains(@{attr_name}, ':{attr_value}') "
-            f"and substring-after(@{attr_name}, ':{attr_value}') = '']"
+            f"//*[contains(@name, ':{attr_value}') "
+            f"and substring-after(@name, ':{attr_value}') = '']"
         )
 
-    def _element_has_name_or_attr_value(value, attr_name='name'):
+    def _element_has_name_or_attr_value(value):
         return (
-            f"//*[local-name()='{value}' or (contains(@{attr_name}, ':{value}') "
-            f"and substring-after(@{attr_name}, ':{value}') = '')]"
+            f"//*[local-name()='{value}' or (contains(@name, ':{value}') "
+            f"and substring-after(@name, ':{value}') = '')]"
         )
 
     # aliases
