@@ -1,6 +1,7 @@
 import re
 
 import httpx
+import pytest
 
 from stream_read_xbrl import (
     stream_read_xbrl_zip,
@@ -47,8 +48,24 @@ expected_columns = (
     'profit_loss_for_period',
 )
 
+@pytest.fixture
+def mock_companies_house_daily_zip(httpx_mock):
+    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        httpx_mock.add_response(
+            url='http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip',
+            content=f.read(),
+        )
 
-def test_stream_read_xbrl_zip():
+@pytest.fixture
+def mock_companies_house_daily_html(httpx_mock):
+    httpx_mock.add_response(
+        url='http://download.companieshouse.gov.uk/en_accountsdata.html',
+        content=b'<a href="Accounts_Bulk_Data-2023-03-02.zip">Link</a>',
+    )
+
+
+def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
+
     with httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r:
         columns, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
         assert columns == expected_columns
@@ -58,13 +75,11 @@ def test_stream_read_xbrl_zip():
             assert len(row) == len(columns)
             row_dict = dict(zip(columns, row))
             assert re.match(r'(\d{8})|([A-Z]{2}\d{6})', row_dict['company_id'])
-            if count >= 1000:
-                break
 
         assert count > 1
 
 
-def test_stream_read_xbrl_daily_all():
+def test_stream_read_xbrl_daily_all(mock_companies_house_daily_html, mock_companies_house_daily_zip):
     count = 0
 
     with stream_read_xbrl_daily_all() as (columns, rows):
@@ -73,7 +88,5 @@ def test_stream_read_xbrl_daily_all():
             assert len(row) == len(columns)
             row_dict = dict(zip(columns, row))
             assert re.match(r'(\d{8})|([A-Z]{2}\d{6})', row_dict['company_id'])
-            if count >= 1000:
-                break
 
     assert count > 1
