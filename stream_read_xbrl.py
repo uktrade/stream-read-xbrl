@@ -19,25 +19,25 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 
     # XPATH helpers
     # XML element syntax: <ns:name attribute='value'>content</ns:name>
-    def _element_has_name(name):
+    def _element_has_tag_name(name):
         return f"//*[local-name()='{name}']"
 
-    def _element_has_attr_value(attr_value, attr_name='name'):
+    def _element_has_name_attr_value(attr_value):
         return (
-            f"//*[contains(@{attr_name}, ':{attr_value}') "
-            f"and substring-after(@{attr_name}, ':{attr_value}') = '']"
+            f"//*[contains(@name, ':{attr_value}') "
+            f"and substring-after(@name, ':{attr_value}') = '']"
         )
 
-    def _element_has_name_or_attr_value(value, attr_name='name'):
+    def _element_has_tag_name_or_name_attr_value(value):
         return (
-            f"//*[local-name()='{value}' or (contains(@{attr_name}, ':{value}') "
-            f"and substring-after(@{attr_name}, ':{value}') = '')]"
+            f"//*[local-name()='{value}' or (contains(@name, ':{value}') "
+            f"and substring-after(@name, ':{value}') = '')]"
         )
 
     # aliases
-    _en = _element_has_name
-    _av = _element_has_attr_value
-    _en_av = _element_has_name_or_attr_value
+    _tn = _element_has_tag_name
+    _av = _element_has_name_attr_value
+    _tn_av = _element_has_tag_name_or_name_attr_value
 
     # {attribute: ([xpath_expressions], attribute_type)}
     #   attribute: identifier for financial attribute
@@ -48,21 +48,21 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         'balance_sheet_date': (
             [
                 _av('BalanceSheetDate'),
-                _en('BalanceSheetDate'),
+                _tn('BalanceSheetDate'),
             ],
             datetime.date,
         ),
         'companies_house_registered_number': (
             [
                 _av('UKCompaniesHouseRegisteredNumber'),
-                _en('CompaniesHouseRegisteredNumber'),
+                _tn('CompaniesHouseRegisteredNumber'),
             ],
             str,
         ),
         'entity_current_legal_name': (
             [
                 _av('EntityCurrentLegalOrRegisteredName'),
-                _en('EntityCurrentLegalName'),
+                _tn('EntityCurrentLegalName'),
                 (
                     "(//*[contains(@name, ':EntityCurrentLegalOrRegisteredName') "
                     "and substring-after(@name, ':EntityCurrentLegalOrRegisteredName') = '']"
@@ -75,8 +75,8 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             [
                 _av('EntityDormantTruefalse'),
                 _av('EntityDormant'),
-                _en('CompanyDormant'),
-                _en('CompanyNotDormant'),
+                _tn('CompanyDormant'),
+                _tn('CompanyNotDormant'),
             ],
             [bool, bool, bool, 'reversed_bool'],
         ),
@@ -84,8 +84,8 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             [
                 _av('AverageNumberEmployeesDuringPeriod'),
                 _av('EmployeesTotal'),
-                _en('AverageNumberEmployeesDuringPeriod'),
-                _en('EmployeesTotal'),
+                _tn('AverageNumberEmployeesDuringPeriod'),
+                _tn('EmployeesTotal'),
             ],
             'float_with_colon',
         ),
@@ -95,28 +95,28 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         # balance sheet
         'tangible_fixed_assets': (
             [
-                _en_av('FixedAssets'),
-                _en_av('TangibleFixedAssets'),
+                _tn_av('FixedAssets'),
+                _tn_av('TangibleFixedAssets'),
                 _av('PropertyPlantEquipment'),
             ],
             float,
         ),
         'debtors': (
             [
-                _en_av('Debtors'),
+                _tn_av('Debtors'),
             ],
             float,
         ),
         'cash_bank_in_hand': (
             [
-                _en_av('CashBankInHand'),
+                _tn_av('CashBankInHand'),
                 _av('CashBankOnHand'),
             ],
             float,
         ),
         'current_assets': (
             [
-                _en_av('CurrentAssets'),
+                _tn_av('CurrentAssets'),
             ],
             float,
         ),
@@ -142,26 +142,26 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         ),
         'net_current_assets_liabilities': (
             [
-                _en_av('NetCurrentAssetsLiabilities'),
+                _tn_av('NetCurrentAssetsLiabilities'),
             ],
             float,
         ),
         'total_assets_less_current_liabilities': (
             [
-                _en_av('TotalAssetsLessCurrentLiabilities'),
+                _tn_av('TotalAssetsLessCurrentLiabilities'),
             ],
             float,
         ),
         'net_assets_liabilities_including_pension_asset_liability': (
             [
-                _en_av('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
-                _en_av('NetAssetsLiabilities'),
+                _tn_av('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
+                _tn_av('NetAssetsLiabilities'),
             ],
             float,
         ),
         'called_up_share_capital': (
             [
-                _en_av('CalledUpShareCapital'),
+                _tn_av('CalledUpShareCapital'),
                 (
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and contains(@contextRef, 'ShareCapital')]"
@@ -171,7 +171,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         ),
         'profit_loss_account_reserve': (
             [
-                _en_av('ProfitLossAccountReserve'),
+                _tn_av('ProfitLossAccountReserve'),
                 (
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and contains(@contextRef, 'RetainedEarningsAccumulatedLosses')]"
@@ -181,7 +181,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         ),
         'shareholder_funds': (
             [
-                _en_av('ShareholderFunds'),
+                _tn_av('ShareholderFunds'),
                 (
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and not(contains(@contextRef, 'segment'))]"
@@ -192,87 +192,87 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         # income statement
         'turnover_gross_operating_revenue': (
             [
-                _en_av('TurnoverGrossOperatingRevenue'),
-                _en_av('TurnoverRevenue'),
+                _tn_av('TurnoverGrossOperatingRevenue'),
+                _tn_av('TurnoverRevenue'),
             ],
             float,
         ),
         'other_operating_income': (
             [
-                _en_av('OtherOperatingIncome'),
-                _en_av('OtherOperatingIncomeFormat2'),
+                _tn_av('OtherOperatingIncome'),
+                _tn_av('OtherOperatingIncomeFormat2'),
             ],
             float,
         ),
         'cost_sales': (
             [
-                _en_av('CostSales'),
+                _tn_av('CostSales'),
             ],
             float,
         ),
         'gross_profit_loss': (
             [
-                _en_av('GrossProfitLoss'),
+                _tn_av('GrossProfitLoss'),
             ],
             float,
         ),
         'administrative_expenses': (
             [
-                _en_av('AdministrativeExpenses'),
+                _tn_av('AdministrativeExpenses'),
             ],
             float,
         ),
         'raw_materials_consumables': (
             [
-                _en_av('RawMaterialsConsumables'),
-                _en_av('RawMaterialsConsumablesUsed'),
+                _tn_av('RawMaterialsConsumables'),
+                _tn_av('RawMaterialsConsumablesUsed'),
             ],
             float,
         ),
         'staff_costs': (
             [
-                _en_av('StaffCosts'),
-                _en_av('StaffCostsEmployeeBenefitsExpense'),
+                _tn_av('StaffCosts'),
+                _tn_av('StaffCostsEmployeeBenefitsExpense'),
             ],
             float,
         ),
         'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets': (
             [
-                _en_av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
-                _en_av('DepreciationAmortisationImpairmentExpense'),
+                _tn_av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
+                _tn_av('DepreciationAmortisationImpairmentExpense'),
             ],
             float,
         ),
         'other_operating_charges_format2': (
             [
-                _en_av('OtherOperatingChargesFormat2'),
-                _en_av('OtherOperatingExpensesFormat2'),
+                _tn_av('OtherOperatingChargesFormat2'),
+                _tn_av('OtherOperatingExpensesFormat2'),
             ],
             float,
         ),
         'operating_profit_loss': (
             [
-                _en_av('OperatingProfitLoss'),
+                _tn_av('OperatingProfitLoss'),
             ],
             float,
         ),
         'profit_loss_on_ordinary_activities_before_tax': (
             [
-                _en_av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
+                _tn_av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
             ],
             float,
         ),
         'tax_on_profit_or_loss_on_ordinary_activities': (
             [
-                _en_av('TaxOnProfitOrLossOnOrdinaryActivities'),
-                _en_av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
+                _tn_av('TaxOnProfitOrLossOnOrdinaryActivities'),
+                _tn_av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
             ],
             float,
         ),
         'profit_loss_for_period': (
             [
-                _en_av('ProfitLoss'),
-                _en_av('ProfitLossForPeriod'),
+                _tn_av('ProfitLoss'),
+                _tn_av('ProfitLossForPeriod'),
             ],
             float,
         ),
