@@ -407,11 +407,11 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         if type == 'reversed_bool':
             return False if text == 'true' else True if text == 'false' else None
 
-    def rows():
-        for name, _, chunks in stream_unzip(zip_bytes_iter):
-            yield from xbrl_to_rows(name.decode(), BytesIO(b''.join(chunks)))
-
-    return tuple(columns), rows()
+    return tuple(columns), (
+        row
+        for name, _, chunks in stream_unzip(zip_bytes_iter)
+        for row in xbrl_to_rows(name.decode(), BytesIO(b''.join(chunks)))
+    )
 
 
 @contextmanager
