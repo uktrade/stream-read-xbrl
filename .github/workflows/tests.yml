@@ -40,9 +40,9 @@ jobs:
         with:
           name: reporter
           path: ./reporter
-      - name: "Install python dependencies"
+      - name: "Install package and python dependencies"
         run: |
-          pip install -r requirements-dev.txt
+          pip install .[dev]
           chmod +x ./reporter/cc-test-reporter
       - name: "Notify code climate of pending coverage upload"
         env:

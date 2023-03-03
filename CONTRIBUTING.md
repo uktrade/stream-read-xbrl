@@ -110,7 +110,7 @@ Changes are then submitted via a Pull Request (PR). To do this:
 3. Make sure you can run existing tests locally
 
     ```bash
-    pip install -r requirements-dev.txt  # Only needed once
+    pip install -e ".[dev]"  # Only needed once
     pytest
     ```
     
