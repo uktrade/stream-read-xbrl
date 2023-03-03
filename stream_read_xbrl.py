@@ -328,21 +328,21 @@ class XBRLParser():
         if element.text and element.text.strip() not in ['', '-']:
             text = element.text.strip()
         else:
-            return 'None'
+            return None
         if type == str:
             return str(text).replace('\n', ' ').replace('"', '')
         if type == float:
             sign = -1 if element.get('sign', '') == '-' else +1
-            return str(sign * float(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0')))
+            return sign * float(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
         if type == 'float_with_colon':
             element.text = re.sub(r'.*: ', '', element.text)
             return XBRLParser._get_value(element, float)
         if type == datetime.date:
-            return dateutil.parser.parse(text).strftime('%Y-%m-%d')
+            return dateutil.parser.parse(text).date()
         if type == bool:
-            return text if text in ['false', 'true'] else 'None'
+            return False if text == 'false' else True if text == 'true' else None
         if type == 'reversed_bool':
-            return 'false' if text == 'true' else 'true' if text == 'false' else 'None'
+            return False if text == 'true' else True if text == 'false' else None
 
 
 def stream_read_xbrl_zip(zip_bytes_iter):
