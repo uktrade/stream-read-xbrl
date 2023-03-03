@@ -286,6 +286,93 @@ def stream_read_xbrl_zip(zip_bytes_iter):
     )
 
     def xbrl_to_rows(name, xbrl_xml_str):
+
+        def _populate_general_attributes(document, attribute, row):
+            xpath_expressions = GENERAL_XPATH_MAPPINGS.get(attribute)[0]
+            for xpath in xpath_expressions:
+                # retrieve value only if not found already
+                if row[columns.index(attribute)] == None:
+                    for e in document.xpath(xpath):
+                        attr_type = _get_attribute_type(
+                            GENERAL_XPATH_MAPPINGS, attribute, xpath
+                        )
+                        row[columns.index(attribute)] = _get_value(e, attr_type)
+
+        def _populate_periodical_attributes(document, contexts, attribute, value_by_period):
+            xpath_expressions = PERIODICAL_XPATH_MAPPINGS.get(attribute)[0]
+            for xpath in xpath_expressions:
+                for e in document.xpath(xpath):
+                    attr_type = _get_attribute_type(
+                        PERIODICAL_XPATH_MAPPINGS, attribute, xpath
+                    )
+                    context_ref_attr = e.xpath('@contextRef')
+                    if context_ref_attr:
+                        context = contexts[context_ref_attr[0]]
+                        if context is not None:
+                            dates = _get_dates(context)
+                            if dates != (None, None):
+                                if dates not in value_by_period:  # create new row
+                                    values = [None] * len(columns)
+                                    values[columns.index(attribute)] = _get_value(
+                                        e, attr_type
+                                    )
+                                    value_by_period[dates] = values
+                                else:  # update row
+                                    values = value_by_period[dates]
+                                    # retrieve value only if not found already
+                                    if values[columns.index(attribute)] == None:
+                                        values[columns.index(attribute)] = _get_value(
+                                            e, attr_type
+                                        )
+            return value_by_period
+
+        def _get_attribute_type(mappings, attribute, xpath):
+            attr_type = mappings.get(attribute)[1]
+            if isinstance(attr_type, list):
+                index = mappings.get(attribute)[0].index(xpath)
+                return attr_type[index]
+            return attr_type
+
+        def _get_dates(context):
+            if context is None:
+                return None, None
+            instant = context.xpath("./*[local-name()='instant']")
+            if instant:
+                v = instant[0].text
+                return v, v
+            else:
+                start_date = context.xpath("./*[local-name()='startDate']/text()")[0]
+                end_date = context.xpath("./*[local-name()='endDate']/text()")[0]
+                if start_date is None or end_date is None:
+                    return None, None
+                return start_date, end_date
+
+        def _get_contexts(document):
+            contexts = {}
+            for e in document.xpath("//*[local-name()='context']"):
+                contexts[e.get('id')] = e.xpath("./*[local-name()='period']")[0]
+            return contexts
+
+        def _get_value(element, type):
+            if element.text and element.text.strip() not in ['', '-']:
+                text = element.text.strip()
+            else:
+                return None
+            if type == str:
+                return str(text).replace('\n', ' ').replace('"', '')
+            if type == float:
+                sign = -1 if element.get('sign', '') == '-' else +1
+                return sign * float(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
+            if type == 'float_with_colon':
+                element.text = re.sub(r'.*: ', '', element.text)
+                return _get_value(element, float)
+            if type == datetime.date:
+                return dateutil.parser.parse(text).date()
+            if type == bool:
+                return False if text == 'false' else True if text == 'true' else None
+            if type == 'reversed_bool':
+                return False if text == 'true' else True if text == 'false' else None
+
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
         contexts = _get_contexts(document)
         value_by_period = OrderedDict()
@@ -320,92 +407,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             for attribute in GENERAL_XPATH_MAPPINGS:
                 _populate_general_attributes(document, attribute, row)
             yield row
-
-    def _populate_general_attributes(document, attribute, row):
-        xpath_expressions = GENERAL_XPATH_MAPPINGS.get(attribute)[0]
-        for xpath in xpath_expressions:
-            # retrieve value only if not found already
-            if row[columns.index(attribute)] == None:
-                for e in document.xpath(xpath):
-                    attr_type = _get_attribute_type(
-                        GENERAL_XPATH_MAPPINGS, attribute, xpath
-                    )
-                    row[columns.index(attribute)] = _get_value(e, attr_type)
-
-    def _populate_periodical_attributes(document, contexts, attribute, value_by_period):
-        xpath_expressions = PERIODICAL_XPATH_MAPPINGS.get(attribute)[0]
-        for xpath in xpath_expressions:
-            for e in document.xpath(xpath):
-                attr_type = _get_attribute_type(
-                    PERIODICAL_XPATH_MAPPINGS, attribute, xpath
-                )
-                context_ref_attr = e.xpath('@contextRef')
-                if context_ref_attr:
-                    context = contexts[context_ref_attr[0]]
-                    if context is not None:
-                        dates = _get_dates(context)
-                        if dates != (None, None):
-                            if dates not in value_by_period:  # create new row
-                                values = [None] * len(columns)
-                                values[columns.index(attribute)] = _get_value(
-                                    e, attr_type
-                                )
-                                value_by_period[dates] = values
-                            else:  # update row
-                                values = value_by_period[dates]
-                                # retrieve value only if not found already
-                                if values[columns.index(attribute)] == None:
-                                    values[columns.index(attribute)] = _get_value(
-                                        e, attr_type
-                                    )
-        return value_by_period
-
-    def _get_attribute_type(mappings, attribute, xpath):
-        attr_type = mappings.get(attribute)[1]
-        if isinstance(attr_type, list):
-            index = mappings.get(attribute)[0].index(xpath)
-            return attr_type[index]
-        return attr_type
-
-    def _get_dates(context):
-        if context is None:
-            return None, None
-        instant = context.xpath("./*[local-name()='instant']")
-        if instant:
-            v = instant[0].text
-            return v, v
-        else:
-            start_date = context.xpath("./*[local-name()='startDate']/text()")[0]
-            end_date = context.xpath("./*[local-name()='endDate']/text()")[0]
-            if start_date is None or end_date is None:
-                return None, None
-            return start_date, end_date
-
-    def _get_contexts(document):
-        contexts = {}
-        for e in document.xpath("//*[local-name()='context']"):
-            contexts[e.get('id')] = e.xpath("./*[local-name()='period']")[0]
-        return contexts
-
-    def _get_value(element, type):
-        if element.text and element.text.strip() not in ['', '-']:
-            text = element.text.strip()
-        else:
-            return None
-        if type == str:
-            return str(text).replace('\n', ' ').replace('"', '')
-        if type == float:
-            sign = -1 if element.get('sign', '') == '-' else +1
-            return sign * float(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
-        if type == 'float_with_colon':
-            element.text = re.sub(r'.*: ', '', element.text)
-            return _get_value(element, float)
-        if type == datetime.date:
-            return dateutil.parser.parse(text).date()
-        if type == bool:
-            return False if text == 'false' else True if text == 'true' else None
-        if type == 'reversed_bool':
-            return False if text == 'true' else True if text == 'false' else None
 
     return tuple(columns), (
         row
