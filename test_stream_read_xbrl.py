@@ -516,22 +516,36 @@ def mock_companies_house_daily_zip(httpx_mock):
         )
 
 @pytest.fixture
+def mock_companies_house_daily_zip_404(httpx_mock):
+    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        httpx_mock.add_response(
+            url='http://download.companieshouse.gov.uk/does-not-exist.zip',
+            status_code=404,
+        )
+
+@pytest.fixture
 def mock_companies_house_daily_html(httpx_mock):
     httpx_mock.add_response(
         url='http://download.companieshouse.gov.uk/en_accountsdata.html',
-        content=b'<a href="Accounts_Bulk_Data-2023-03-02.zip">Link</a>',
+        content=b'''
+            <a href="Accounts_Bulk_Data-2023-03-02.zip">Link</a>
+            <a href="does-not-exist.zip">Link</a>
+        ''',
     )
 
 
 def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
-
     with httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r:
         columns, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
 
 
-def test_stream_read_xbrl_daily_all(mock_companies_house_daily_html, mock_companies_house_daily_zip):
+def test_stream_read_xbrl_daily_all(
+    mock_companies_house_daily_html,
+    mock_companies_house_daily_zip,
+    mock_companies_house_daily_zip_404,
+):
     count = 0
 
     with stream_read_xbrl_daily_all() as (columns, rows):

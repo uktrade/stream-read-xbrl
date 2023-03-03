@@ -410,6 +410,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 def stream_read_xbrl_daily_all(
     url='http://download.companieshouse.gov.uk/en_accountsdata.html',
     get_client=lambda: httpx.Client(transport=httpx.HTTPTransport(retries=3)),
+    allow_404=True,
 ):
     with get_client() as client:
         all_links = BeautifulSoup(httpx.get(url).content, "html.parser").find_all('a')
@@ -423,6 +424,16 @@ def stream_read_xbrl_daily_all(
         def rows():
             for zip_url in zip_urls:
                 with client.stream('GET', zip_url) as r:
+                    try:
+                        r.raise_for_status()
+                    except httpx.HTTPStatusError:
+                        if r.status_code != 404 or not allow_404:
+                            raise
+                        else:
+                            for _ in r.iter_bytes(chunk_size=65536):
+                                pass
+                            continue
+
                     _, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
                     yield from rows
 
