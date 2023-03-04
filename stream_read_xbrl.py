@@ -374,14 +374,11 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     return None, None
                 return start_date, end_date
 
-        def _get_contexts(document):
-            return {
-                e.get('id'): e.xpath("./*[local-name()='period']")[0]
-                for e in document.xpath("//*[local-name()='context']")
-            }
-
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
-        contexts = _get_contexts(document)
+        contexts = {
+            e.get('id'): e.xpath("./*[local-name()='period']")[0]
+            for e in document.xpath("//*[local-name()='context']")
+        }
         value_by_period = OrderedDict()
 
         # retrieve periodical attribute values
