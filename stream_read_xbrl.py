@@ -353,10 +353,9 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 
         def _get_attribute_type(mappings, attribute, xpath):
             attr_type = mappings.get(attribute)[1]
-            if isinstance(attr_type, list):
-                index = mappings.get(attribute)[0].index(xpath)
-                return attr_type[index]
-            return attr_type
+            return \
+                attr_type[mappings.get(attribute)[0].index(xpath)] if isinstance(attr_type, list) else \
+                attr_type
 
         def _get_dates(context):
             instant_elements = context.xpath("./*[local-name()='instant']")
