@@ -343,12 +343,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     value = _parse(e, e.text, attr_type)
                     yield (dates, value)
 
-        def _get_attribute_type(mappings, attribute, xpath):
-            attr_type = mappings.get(attribute)[1]
-            return \
-                attr_type[mappings.get(attribute)[0].index(xpath)] if isinstance(attr_type, list) else \
-                attr_type
-
         def _get_dates(context):
             instant_elements = context.xpath("./*[local-name()='instant']")
             start_date_text_nodes = context.xpath("./*[local-name()='startDate']/text()")
@@ -391,7 +385,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             for (name, (xpath_expressions, attribute)) in PERIODICAL_XPATH_MAPPINGS.items()
             for (dates, value) in _periodical_attributes(xpath_expressions, attribute)
         }
-        period_dates = tuple(dict.fromkeys(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))
         period_dates = reversed(sorted(list(set(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))))
         periods = tuple((
             period_start_end + tuple((
