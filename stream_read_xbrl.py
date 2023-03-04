@@ -376,11 +376,19 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         fn = os.path.basename(name)
         mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
         run_code, company_id, date, filetype = mo.groups()
+        allowed_taxonomies = [
+            'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
+            'http://www.xbrl.org/uk/gaap/core/2009-09-01',
+            'http://xbrl.frc.org.uk/fr/2014-09-01/core',
+        ]
         core_attributes = (
             ('run_code', run_code),
             ('company_id', company_id),
             ('date', dateutil.parser.parse(date).date()),
             ('file_type', filetype),
+            ('taxonomy', ';'.join(
+                set(allowed_taxonomies) & set(document.getroot().nsmap.values())
+            ))
         )
 
         general_attributes = tuple(
@@ -400,14 +408,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             for name, value in core_attributes:
                 row[columns.index(name)] = value
 
-            allowed_taxonomies = [
-                'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
-                'http://www.xbrl.org/uk/gaap/core/2009-09-01',
-                'http://xbrl.frc.org.uk/fr/2014-09-01/core',
-            ]
-            row[columns.index('taxonomy')] = ';'.join(
-                set(allowed_taxonomies) & set(document.getroot().nsmap.values())
-            )
             row[columns.index('period_start')] = None if period[0] is None else dateutil.parser.parse(period[0]).date()
             row[columns.index('period_end')] = None if period[1] is None else dateutil.parser.parse(period[1]).date()
             for name, value in general_attributes:
