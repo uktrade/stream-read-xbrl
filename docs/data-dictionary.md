@@ -1,12 +1,18 @@
 # Data dictionary
 
-stream-read-xbrl converts Companies House accounts data into a single table with 36 columns. Each row corresponds to a single period for a single company. However, periods may be repeated corresponding to multiple submissions to Companies House.
+stream-read-xbrl converts Companies House accounts data into a single data frame of 37 columns. Each row corresponds to a single period for a single company. However, periods may be repeated corresponding to multiple submissions to Companies House.
 
+The 37 columns can be interpreted as denormalised data of 3 source data frames - "Runs", "Companies at date in run", and "Periods for company at date in run".
+
+
+## Runs
 
 **run_code**
 
 :   text
 
+
+## Companies at date in run
 
 **company_id**
 
@@ -26,16 +32,6 @@ stream-read-xbrl converts Companies House accounts data into a single table with
 **taxonomy**
 
 :   text
-
-
-**period_start**
-
-:   date
-
-
-**period_end**
-
-:   date
 
 
 **balance_sheet_date**
@@ -61,6 +57,20 @@ stream-read-xbrl converts Companies House accounts data into a single table with
 **average_number_employees_during_period**
 
 :   numeric
+
+
+## Periods for company in run
+
+It is possible for stream-read-xbrl to not find any for a company at date in a run. If this is the case, all these values are `None`.
+
+**period_start**
+
+:   date
+
+
+**period_end**
+
+:   date
 
 
 **tangible_fixed_assets**
