@@ -325,7 +325,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                         )
                         row[columns.index(attribute)] = _parse(e, e.text, attr_type)
 
-        def _populate_periodical_attributes(document, contexts, attribute, value_by_period):
+        def _populate_periodical_attributes(document, context_dates, attribute, value_by_period):
             xpath_expressions = PERIODICAL_XPATH_MAPPINGS.get(attribute)[0]
             for xpath in xpath_expressions:
                 for e in document.xpath(xpath):
@@ -334,23 +334,21 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     )
                     context_ref_attr = e.xpath('@contextRef')
                     if context_ref_attr:
-                        context = contexts[context_ref_attr[0]]
-                        if context is not None:
-                            dates = _get_dates(context)
-                            if dates != (None, None):
-                                if dates not in value_by_period:  # create new row
-                                    values = [None] * len(columns)
+                        dates = context_dates[context_ref_attr[0]]
+                        if dates != (None, None):
+                            if dates not in value_by_period:  # create new row
+                                values = [None] * len(columns)
+                                values[columns.index(attribute)] = _parse(
+                                    e, e.text, attr_type
+                                )
+                                value_by_period[dates] = values
+                            else:  # update row
+                                values = value_by_period[dates]
+                                # retrieve value only if not found already
+                                if values[columns.index(attribute)] == None:
                                     values[columns.index(attribute)] = _parse(
                                         e, e.text, attr_type
                                     )
-                                    value_by_period[dates] = values
-                                else:  # update row
-                                    values = value_by_period[dates]
-                                    # retrieve value only if not found already
-                                    if values[columns.index(attribute)] == None:
-                                        values[columns.index(attribute)] = _parse(
-                                            e, e.text, attr_type
-                                        )
             return value_by_period
 
         def _get_attribute_type(mappings, attribute, xpath):
@@ -379,11 +377,15 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             e.get('id'): e.xpath("./*[local-name()='period']")[0]
             for e in document.xpath("//*[local-name()='context']")
         }
+        context_dates = {
+            context_id: _get_dates(context)
+            for context_id, context in contexts.items()
+        }
         value_by_period = OrderedDict()
 
         # retrieve periodical attribute values
         for attribute in PERIODICAL_XPATH_MAPPINGS:
-            _populate_periodical_attributes(document, contexts, attribute, value_by_period)
+            _populate_periodical_attributes(document, context_dates, attribute, value_by_period)
 
         # if no periodical attributes found, create empty row for general attributes
         if not value_by_period:
