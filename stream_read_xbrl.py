@@ -335,19 +335,16 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     if context_ref_attr:
                         dates = context_dates[context_ref_attr[0]]
                         if dates != (None, None):
+                            value = _parse(e, e.text, attr_type)
                             if dates not in value_by_period:  # create new row
                                 values = [None] * len(columns)
-                                values[columns.index(attribute)] = _parse(
-                                    e, e.text, attr_type
-                                )
+                                values[columns.index(attribute)] = value
                                 value_by_period[dates] = values
                             else:  # update row
                                 values = value_by_period[dates]
                                 # retrieve value only if not found already
                                 if values[columns.index(attribute)] == None:
-                                    values[columns.index(attribute)] = _parse(
-                                        e, e.text, attr_type
-                                    )
+                                    values[columns.index(attribute)] = value
             return value_by_period
 
         def _get_attribute_type(mappings, attribute, xpath):
