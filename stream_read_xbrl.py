@@ -18,6 +18,32 @@ from stream_unzip import stream_unzip
 
 def stream_read_xbrl_zip(zip_bytes_iter):
 
+    # Low level value parsers
+
+    def _parse(element, text, parser):
+        return \
+            parser(element, text.strip()) if text and text.strip() not in ['', '-'] else \
+            None
+
+    def _parse_str(element, text):
+        return str(text).replace('\n', ' ').replace('"', '')
+
+    def _parse_decimal(element, text):
+        sign = -1 if element.get('sign', '') == '-' else +1
+        return sign * Decimal(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
+
+    def _parse_decimal_with_colon(element, text):
+        return _parse(element, re.sub(r'.*: ', '', text), _parse_decimal)
+
+    def _parse_date(element, text):
+        return dateutil.parser.parse(text).date()
+
+    def _parse_bool(element, text):
+        return False if text == 'false' else True if text == 'true' else None
+
+    def _parse_reversed_bool(element, text):
+        return False if text == 'true' else True if text == 'false' else None
+
     # XPATH helpers
     # XML element syntax: <ns:name attribute='value'>content</ns:name>
     def _element_has_tag_name(name):
@@ -51,14 +77,14 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _av('BalanceSheetDate'),
                 _tn('BalanceSheetDate'),
             ],
-            datetime.date,
+            _parse_date,
         ),
         'companies_house_registered_number': (
             [
                 _av('UKCompaniesHouseRegisteredNumber'),
                 _tn('CompaniesHouseRegisteredNumber'),
             ],
-            str,
+            _parse_str,
         ),
         'entity_current_legal_name': (
             [
@@ -70,7 +96,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "//*[local-name()='span'])[1]"
                 ),
             ],
-            str,
+            _parse_str,
         ),
         'company_dormant': (
             [
@@ -79,7 +105,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn('CompanyDormant'),
                 _tn('CompanyNotDormant'),
             ],
-            [bool, bool, bool, 'reversed_bool'],
+            [_parse_bool, _parse_bool, _parse_bool, _parse_reversed_bool],
         ),
         'average_number_employees_during_period': (
             [
@@ -88,7 +114,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn('AverageNumberEmployeesDuringPeriod'),
                 _tn('EmployeesTotal'),
             ],
-            'decimal_with_colon',
+            _parse_decimal_with_colon,
         ),
     }
 
@@ -100,26 +126,26 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn_av('TangibleFixedAssets'),
                 _av('PropertyPlantEquipment'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'debtors': (
             [
                 _tn_av('Debtors'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'cash_bank_in_hand': (
             [
                 _tn_av('CashBankInHand'),
                 _av('CashBankOnHand'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'current_assets': (
             [
                 _tn_av('CurrentAssets'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'creditors_due_within_one_year': (
             [
@@ -129,7 +155,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     " = '' and contains(@contextRef, 'WithinOneYear')]"
                 ),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'creditors_due_after_one_year': (
             [
@@ -139,26 +165,26 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     " = '' and contains(@contextRef, 'AfterOneYear')]"
                 ),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'net_current_assets_liabilities': (
             [
                 _tn_av('NetCurrentAssetsLiabilities'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'total_assets_less_current_liabilities': (
             [
                 _tn_av('TotalAssetsLessCurrentLiabilities'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'net_assets_liabilities_including_pension_asset_liability': (
             [
                 _tn_av('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
                 _tn_av('NetAssetsLiabilities'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'called_up_share_capital': (
             [
@@ -168,7 +194,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "and contains(@contextRef, 'ShareCapital')]"
                 ),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'profit_loss_account_reserve': (
             [
@@ -178,7 +204,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "and contains(@contextRef, 'RetainedEarningsAccumulatedLosses')]"
                 ),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'shareholder_funds': (
             [
@@ -188,7 +214,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "and not(contains(@contextRef, 'segment'))]"
                 ),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         # income statement
         'turnover_gross_operating_revenue': (
@@ -196,86 +222,86 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn_av('TurnoverGrossOperatingRevenue'),
                 _tn_av('TurnoverRevenue'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'other_operating_income': (
             [
                 _tn_av('OtherOperatingIncome'),
                 _tn_av('OtherOperatingIncomeFormat2'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'cost_sales': (
             [
                 _tn_av('CostSales'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'gross_profit_loss': (
             [
                 _tn_av('GrossProfitLoss'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'administrative_expenses': (
             [
                 _tn_av('AdministrativeExpenses'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'raw_materials_consumables': (
             [
                 _tn_av('RawMaterialsConsumables'),
                 _tn_av('RawMaterialsConsumablesUsed'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'staff_costs': (
             [
                 _tn_av('StaffCosts'),
                 _tn_av('StaffCostsEmployeeBenefitsExpense'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets': (
             [
                 _tn_av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
                 _tn_av('DepreciationAmortisationImpairmentExpense'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'other_operating_charges_format2': (
             [
                 _tn_av('OtherOperatingChargesFormat2'),
                 _tn_av('OtherOperatingExpensesFormat2'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'operating_profit_loss': (
             [
                 _tn_av('OperatingProfitLoss'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'profit_loss_on_ordinary_activities_before_tax': (
             [
                 _tn_av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'tax_on_profit_or_loss_on_ordinary_activities': (
             [
                 _tn_av('TaxOnProfitOrLossOnOrdinaryActivities'),
                 _tn_av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
         'profit_loss_for_period': (
             [
                 _tn_av('ProfitLoss'),
                 _tn_av('ProfitLossForPeriod'),
             ],
-            Decimal,
+            _parse_decimal,
         ),
     }
 
@@ -297,7 +323,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                         attr_type = _get_attribute_type(
                             GENERAL_XPATH_MAPPINGS, attribute, xpath
                         )
-                        row[columns.index(attribute)] = _get_value(e, attr_type)
+                        row[columns.index(attribute)] = _parse(e, e.text, attr_type)
 
         def _populate_periodical_attributes(document, contexts, attribute, value_by_period):
             xpath_expressions = PERIODICAL_XPATH_MAPPINGS.get(attribute)[0]
@@ -314,16 +340,16 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                             if dates != (None, None):
                                 if dates not in value_by_period:  # create new row
                                     values = [None] * len(columns)
-                                    values[columns.index(attribute)] = _get_value(
-                                        e, attr_type
+                                    values[columns.index(attribute)] = _parse(
+                                        e, e.text, attr_type
                                     )
                                     value_by_period[dates] = values
                                 else:  # update row
                                     values = value_by_period[dates]
                                     # retrieve value only if not found already
                                     if values[columns.index(attribute)] == None:
-                                        values[columns.index(attribute)] = _get_value(
-                                            e, attr_type
+                                        values[columns.index(attribute)] = _parse(
+                                            e, e.text, attr_type
                                         )
             return value_by_period
 
@@ -353,26 +379,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             for e in document.xpath("//*[local-name()='context']"):
                 contexts[e.get('id')] = e.xpath("./*[local-name()='period']")[0]
             return contexts
-
-        def _get_value(element, type):
-            if element.text and element.text.strip() not in ['', '-']:
-                text = element.text.strip()
-            else:
-                return None
-            if type == str:
-                return str(text).replace('\n', ' ').replace('"', '')
-            if type == Decimal:
-                sign = -1 if element.get('sign', '') == '-' else +1
-                return sign * Decimal(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
-            if type == 'decimal_with_colon':
-                element.text = re.sub(r'.*: ', '', element.text)
-                return _get_value(element, Decimal)
-            if type == datetime.date:
-                return dateutil.parser.parse(text).date()
-            if type == bool:
-                return False if text == 'false' else True if text == 'true' else None
-            if type == 'reversed_bool':
-                return False if text == 'true' else True if text == 'false' else None
 
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
         contexts = _get_contexts(document)
