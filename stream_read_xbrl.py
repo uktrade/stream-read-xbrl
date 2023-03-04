@@ -405,13 +405,11 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             value_by_period[(None, None)] = [None] * len(columns)
 
         for period, row in value_by_period.items():
-            for name, value in core_attributes:
+            for name, value in core_attributes + general_attributes:
                 row[columns.index(name)] = value
 
             row[columns.index('period_start')] = None if period[0] is None else dateutil.parser.parse(period[0]).date()
             row[columns.index('period_end')] = None if period[1] is None else dateutil.parser.parse(period[1]).date()
-            for name, value in general_attributes:
-                row[columns.index(name)] = value
 
             yield row
 
