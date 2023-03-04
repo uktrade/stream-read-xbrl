@@ -373,13 +373,9 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 return start_date, end_date
 
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
-        contexts = {
-            e.get('id'): e.xpath("./*[local-name()='period']")[0]
-            for e in document.xpath("//*[local-name()='context']")
-        }
         context_dates = {
-            context_id: _get_dates(context)
-            for context_id, context in contexts.items()
+            e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
+            for e in document.xpath("//*[local-name()='context']")
         }
         value_by_period = OrderedDict()
 
