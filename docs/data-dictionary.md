@@ -1,11 +1,11 @@
 # Data dictionary
 
-stream-read-xbrl converts Companies House accounts data into a single data frame of 37 columns. Each row corresponds to a single period for a single company. However, periods may be repeated corresponding to multiple submissions to Companies House.
-
-The 37 columns can be interpreted as denormalised data of 3 source data frames - "Runs", "Companies at date in run", and "Periods for company at date in run".
+stream-read-xbrl converts Companies House accounts data into a single data frame of 37 columns. The 37 columns can be interpreted as a denormalised data frame of 3 source data frames - "Runs", "Companies at date in run", and "Periods for company at date in run".
 
 
 ## Runs
+
+There should be one or more runs in all data extracted by stream-read-xbrl.
 
 **run_code**
 
@@ -13,6 +13,8 @@ The 37 columns can be interpreted as denormalised data of 3 source data frames -
 
 
 ## Companies at date in run
+
+For each Run, there would be one or more "Companies at date in a run".
 
 **company_id**
 
@@ -61,7 +63,9 @@ The 37 columns can be interpreted as denormalised data of 3 source data frames -
 
 ## Periods for company in run
 
-It is possible for stream-read-xbrl to not find any for a company at date in a run. If this is the case, all these values are `None`.
+For each "Company at a date in a run" there can be zero or more "Periods for company in run". In the case of zero, all the following values are `None`.
+
+A period for a company, defined by `company_id`, `period_start` and `period_end`, may be repeated. This is because they are contained in multiple submissions of accounts data to Companies House.
 
 **period_start**
 
