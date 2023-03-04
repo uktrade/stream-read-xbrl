@@ -359,18 +359,14 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             return attr_type
 
         def _get_dates(context):
-            if context is None:
-                return None, None
-            instant = context.xpath("./*[local-name()='instant']")
-            if instant:
-                v = instant[0].text
-                return v, v
-            else:
-                start_date = context.xpath("./*[local-name()='startDate']/text()")[0]
-                end_date = context.xpath("./*[local-name()='endDate']/text()")[0]
-                if start_date is None or end_date is None:
-                    return None, None
-                return start_date, end_date
+            instant_elements = context.xpath("./*[local-name()='instant']")
+            start_date_text_nodes = context.xpath("./*[local-name()='startDate']/text()")
+            end_date_text_nodes = context.xpath("./*[local-name()='endDate']/text()")
+            return \
+                (None, None) if context is None else \
+                (instant_elements[0].text, instant_elements[0].text) if instant_elements else \
+                (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
+                (start_date_text_nodes[0], end_date_text_nodes[0])
 
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
         context_dates = {
