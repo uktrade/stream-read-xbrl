@@ -391,7 +391,6 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             for (name, (xpath_expressions, attribute)) in PERIODICAL_XPATH_MAPPINGS.items()
             for (dates, value) in _periodical_attributes(xpath_expressions, attribute)
         }
-        period_dates = tuple(dict.fromkeys(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))
         period_dates = reversed(sorted(list(set(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))))
         periods = tuple((
             period_start_end + tuple((
