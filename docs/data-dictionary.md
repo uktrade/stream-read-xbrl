@@ -9,14 +9,14 @@ The 37 columns can be interpreted as denormalised data of 3 source data frames -
 
 **run_code**
 
-:   text
+:   str
 
 
 ## Companies at date in run
 
 **company_id**
 
-:   text
+:   str
 
 
 **date**
@@ -26,12 +26,12 @@ The 37 columns can be interpreted as denormalised data of 3 source data frames -
 
 **file_type**
 
-:   text
+:   str
 
 
 **taxonomy**
 
-:   text
+:   str
 
 
 **balance_sheet_date**
@@ -46,17 +46,17 @@ The 37 columns can be interpreted as denormalised data of 3 source data frames -
 
 **entity_current_legal_name**
 
-:   text
+:   str
 
 
 **company_dormant**
 
-:   boolean
+:   bool
 
 
 **average_number_employees_during_period**
 
-:   numeric
+:   Decimal
 
 
 ## Periods for company in run
@@ -75,124 +75,124 @@ It is possible for stream-read-xbrl to not find any for a company at date in a r
 
 **tangible_fixed_assets**
 
-:   numeric
+:   Decimal
 
 
 **debtors**
 
-:   numeric
+:   Decimal
 
 
 **cash_bank_in_hand**
 
-:   numeric
+:   Decimal
 
 
 **current_assets**
 
-:   numeric
+:   Decimal
 
 
 **creditors_due_within_one_year**
 
-:   numeric
+:   Decimal
 
 
 **creditors_due_after_one_year**
 
-:   numeric
+:   Decimal
 
 
 **net_current_assets_liabilities**
 
-:   numeric
+:   Decimal
 
 
 **total_assets_less_current_liabilities**
 
-:   numeric
+:   Decimal
 
 
 **net_assets_liabilities_including_pension_asset_liability**
 
-:   numeric
+:   Decimal
 
 
 **called_up_share_capital**
 
-:   numeric
+:   Decimal
 
 
 **profit_loss_account_reserve**
 
-:   numeric
+:   Decimal
 
 
 **shareholder_funds**
 
-:   numeric
+:   Decimal
 
 
 **turnover_gross_operating_revenue**
 
-:   numeric
+:   Decimal
 
 
 **other_operating_income**
 
-:   numeric
+:   Decimal
 
 
 **cost_sales**
 
-:   numeric
+:   Decimal
 
 
 **gross_profit_loss**
 
-:   numeric
+:   Decimal
 
 
 **administrative_expenses**
 
-:   numeric
+:   Decimal
 
 
 **raw_materials_consumables**
 
-:   numeric
+:   Decimal
 
 
 **staff_costs**
 
-:   numeric
+:   Decimal
 
 
 **depreciation_other_amounts_written_off_tangible_intangible_fixed**
 
-:   numeric
+:   Decimal
 
 
 **other_operating_charges_format2**
 
-:   numeric
+:   Decimal
 
 
 **operating_profit_loss**
 
-:   numeric
+:   Decimal
 
 
 **profit_loss_on_ordinary_activities_before_tax**
 
-:   numeric
+:   Decimal
 
 
 **tax_on_profit_or_loss_on_ordinary_activities**
 
-:   numeric
+:   Decimal
 
 
 **profit_loss_for_period**
 
-:   numeric
+:   Decimal

@@ -4,6 +4,7 @@ import re
 import urllib.parse
 from collections import OrderedDict
 from contextlib import contextmanager
+from decimal import Decimal
 from io import BytesIO
 
 import dateutil
@@ -87,7 +88,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn('AverageNumberEmployeesDuringPeriod'),
                 _tn('EmployeesTotal'),
             ],
-            'float_with_colon',
+            'decimal_with_colon',
         ),
     }
 
@@ -99,26 +100,26 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn_av('TangibleFixedAssets'),
                 _av('PropertyPlantEquipment'),
             ],
-            float,
+            Decimal,
         ),
         'debtors': (
             [
                 _tn_av('Debtors'),
             ],
-            float,
+            Decimal,
         ),
         'cash_bank_in_hand': (
             [
                 _tn_av('CashBankInHand'),
                 _av('CashBankOnHand'),
             ],
-            float,
+            Decimal,
         ),
         'current_assets': (
             [
                 _tn_av('CurrentAssets'),
             ],
-            float,
+            Decimal,
         ),
         'creditors_due_within_one_year': (
             [
@@ -128,7 +129,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     " = '' and contains(@contextRef, 'WithinOneYear')]"
                 ),
             ],
-            float,
+            Decimal,
         ),
         'creditors_due_after_one_year': (
             [
@@ -138,26 +139,26 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     " = '' and contains(@contextRef, 'AfterOneYear')]"
                 ),
             ],
-            float,
+            Decimal,
         ),
         'net_current_assets_liabilities': (
             [
                 _tn_av('NetCurrentAssetsLiabilities'),
             ],
-            float,
+            Decimal,
         ),
         'total_assets_less_current_liabilities': (
             [
                 _tn_av('TotalAssetsLessCurrentLiabilities'),
             ],
-            float,
+            Decimal,
         ),
         'net_assets_liabilities_including_pension_asset_liability': (
             [
                 _tn_av('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
                 _tn_av('NetAssetsLiabilities'),
             ],
-            float,
+            Decimal,
         ),
         'called_up_share_capital': (
             [
@@ -167,7 +168,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "and contains(@contextRef, 'ShareCapital')]"
                 ),
             ],
-            float,
+            Decimal,
         ),
         'profit_loss_account_reserve': (
             [
@@ -177,7 +178,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "and contains(@contextRef, 'RetainedEarningsAccumulatedLosses')]"
                 ),
             ],
-            float,
+            Decimal,
         ),
         'shareholder_funds': (
             [
@@ -187,7 +188,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     "and not(contains(@contextRef, 'segment'))]"
                 ),
             ],
-            float,
+            Decimal,
         ),
         # income statement
         'turnover_gross_operating_revenue': (
@@ -195,86 +196,86 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 _tn_av('TurnoverGrossOperatingRevenue'),
                 _tn_av('TurnoverRevenue'),
             ],
-            float,
+            Decimal,
         ),
         'other_operating_income': (
             [
                 _tn_av('OtherOperatingIncome'),
                 _tn_av('OtherOperatingIncomeFormat2'),
             ],
-            float,
+            Decimal,
         ),
         'cost_sales': (
             [
                 _tn_av('CostSales'),
             ],
-            float,
+            Decimal,
         ),
         'gross_profit_loss': (
             [
                 _tn_av('GrossProfitLoss'),
             ],
-            float,
+            Decimal,
         ),
         'administrative_expenses': (
             [
                 _tn_av('AdministrativeExpenses'),
             ],
-            float,
+            Decimal,
         ),
         'raw_materials_consumables': (
             [
                 _tn_av('RawMaterialsConsumables'),
                 _tn_av('RawMaterialsConsumablesUsed'),
             ],
-            float,
+            Decimal,
         ),
         'staff_costs': (
             [
                 _tn_av('StaffCosts'),
                 _tn_av('StaffCostsEmployeeBenefitsExpense'),
             ],
-            float,
+            Decimal,
         ),
         'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets': (
             [
                 _tn_av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
                 _tn_av('DepreciationAmortisationImpairmentExpense'),
             ],
-            float,
+            Decimal,
         ),
         'other_operating_charges_format2': (
             [
                 _tn_av('OtherOperatingChargesFormat2'),
                 _tn_av('OtherOperatingExpensesFormat2'),
             ],
-            float,
+            Decimal,
         ),
         'operating_profit_loss': (
             [
                 _tn_av('OperatingProfitLoss'),
             ],
-            float,
+            Decimal,
         ),
         'profit_loss_on_ordinary_activities_before_tax': (
             [
                 _tn_av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
             ],
-            float,
+            Decimal,
         ),
         'tax_on_profit_or_loss_on_ordinary_activities': (
             [
                 _tn_av('TaxOnProfitOrLossOnOrdinaryActivities'),
                 _tn_av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
             ],
-            float,
+            Decimal,
         ),
         'profit_loss_for_period': (
             [
                 _tn_av('ProfitLoss'),
                 _tn_av('ProfitLossForPeriod'),
             ],
-            float,
+            Decimal,
         ),
     }
 
@@ -360,12 +361,12 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 return None
             if type == str:
                 return str(text).replace('\n', ' ').replace('"', '')
-            if type == float:
+            if type == Decimal:
                 sign = -1 if element.get('sign', '') == '-' else +1
-                return sign * float(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
-            if type == 'float_with_colon':
+                return sign * Decimal(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
+            if type == 'decimal_with_colon':
                 element.text = re.sub(r'.*: ', '', element.text)
-                return _get_value(element, float)
+                return _get_value(element, Decimal)
             if type == datetime.date:
                 return dateutil.parser.parse(text).date()
             if type == bool:
