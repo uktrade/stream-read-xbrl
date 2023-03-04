@@ -329,7 +329,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     yield _parse(e, e.text, attr_type)
 
         def _periodical_attributes(xpath_expressions, attr_type_maybe_list):
-            for i, xpath in enumerate(reversed(xpath_expressions)):
+            for i, xpath in reversed(list(enumerate(xpath_expressions))):
                 attr_type = \
                     attr_type_maybe_list[i] if isinstance(attr_type_maybe_list, list) else \
                     attr_type_maybe_list
