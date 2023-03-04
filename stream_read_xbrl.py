@@ -5,6 +5,7 @@ import urllib.parse
 from collections import OrderedDict
 from contextlib import contextmanager
 from decimal import Decimal
+from itertools import chain
 from io import BytesIO
 
 import dateutil
@@ -19,6 +20,9 @@ from stream_unzip import stream_unzip
 def stream_read_xbrl_zip(zip_bytes_iter):
 
     # Low level value parsers
+
+    def _date(text):
+        return dateutil.parser.parse(text).date()
 
     def _parse(element, text, parser):
         return \
@@ -36,7 +40,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         return _parse(element, re.sub(r'.*: ', '', text), _parse_decimal)
 
     def _parse_date(element, text):
-        return dateutil.parser.parse(text).date()
+        return _date(text)
 
     def _parse_bool(element, text):
         return False if text == 'false' else True if text == 'true' else None
@@ -307,113 +311,99 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 
     # columns names used to store the companies financial attributes
     columns = (
-        ['run_code', 'company_id', 'date', 'file_type', 'taxonomy', 'period_start', 'period_end']
+        ['run_code', 'company_id', 'date', 'file_type', 'taxonomy']
         + [key for key in GENERAL_XPATH_MAPPINGS.keys()]
-        + [key for key in PERIODICAL_XPATH_MAPPINGS.keys()]
+        + ['period_start', 'period_end'] + [key for key in PERIODICAL_XPATH_MAPPINGS.keys()]
     )
 
     def xbrl_to_rows(name, xbrl_xml_str):
 
-        def _populate_general_attributes(document, attribute, row):
-            xpath_expressions = GENERAL_XPATH_MAPPINGS.get(attribute)[0]
-            for xpath in xpath_expressions:
-                # retrieve value only if not found already
-                if row[columns.index(attribute)] == None:
-                    for e in document.xpath(xpath):
-                        attr_type = _get_attribute_type(
-                            GENERAL_XPATH_MAPPINGS, attribute, xpath
-                        )
-                        row[columns.index(attribute)] = _parse(e, e.text, attr_type)
+        def _general_attributes(xpath_expressions, attr_type_maybe_list):
+            for i, xpath in enumerate(xpath_expressions):
+                attr_type = \
+                    attr_type_maybe_list[i] if isinstance(attr_type_maybe_list, list) else \
+                    attr_type_maybe_list
+                # Reversed so we choose the last non None in the document, which stands the best
+                # chance of being for the most recent period, so the current state of the company
+                for e in reversed(document.xpath(xpath)):
+                    yield _parse(e, e.text, attr_type)
 
-        def _populate_periodical_attributes(document, contexts, attribute, value_by_period):
-            xpath_expressions = PERIODICAL_XPATH_MAPPINGS.get(attribute)[0]
-            for xpath in xpath_expressions:
-                for e in document.xpath(xpath):
-                    attr_type = _get_attribute_type(
-                        PERIODICAL_XPATH_MAPPINGS, attribute, xpath
-                    )
+        def _periodical_attributes(xpath_expressions, attr_type_maybe_list):
+            for i, xpath in enumerate(reversed(xpath_expressions)):
+                attr_type = \
+                    attr_type_maybe_list[i] if isinstance(attr_type_maybe_list, list) else \
+                    attr_type_maybe_list
+                for e in reversed(document.xpath(xpath)):
                     context_ref_attr = e.xpath('@contextRef')
-                    if context_ref_attr:
-                        context = contexts[context_ref_attr[0]]
-                        if context is not None:
-                            dates = _get_dates(context)
-                            if dates != (None, None):
-                                if dates not in value_by_period:  # create new row
-                                    values = [None] * len(columns)
-                                    values[columns.index(attribute)] = _parse(
-                                        e, e.text, attr_type
-                                    )
-                                    value_by_period[dates] = values
-                                else:  # update row
-                                    values = value_by_period[dates]
-                                    # retrieve value only if not found already
-                                    if values[columns.index(attribute)] == None:
-                                        values[columns.index(attribute)] = _parse(
-                                            e, e.text, attr_type
-                                        )
-            return value_by_period
+                    if not context_ref_attr:
+                        continue
+                    dates = context_dates[context_ref_attr[0]]
+                    if not dates:
+                        continue
+                    value = _parse(e, e.text, attr_type)
+                    yield (dates, value)
 
         def _get_attribute_type(mappings, attribute, xpath):
             attr_type = mappings.get(attribute)[1]
-            if isinstance(attr_type, list):
-                index = mappings.get(attribute)[0].index(xpath)
-                return attr_type[index]
-            return attr_type
+            return \
+                attr_type[mappings.get(attribute)[0].index(xpath)] if isinstance(attr_type, list) else \
+                attr_type
 
         def _get_dates(context):
-            if context is None:
-                return None, None
-            instant = context.xpath("./*[local-name()='instant']")
-            if instant:
-                v = instant[0].text
-                return v, v
-            else:
-                start_date = context.xpath("./*[local-name()='startDate']/text()")[0]
-                end_date = context.xpath("./*[local-name()='endDate']/text()")[0]
-                if start_date is None or end_date is None:
-                    return None, None
-                return start_date, end_date
-
-        def _get_contexts(document):
-            contexts = {}
-            for e in document.xpath("//*[local-name()='context']"):
-                contexts[e.get('id')] = e.xpath("./*[local-name()='period']")[0]
-            return contexts
+            instant_elements = context.xpath("./*[local-name()='instant']")
+            start_date_text_nodes = context.xpath("./*[local-name()='startDate']/text()")
+            end_date_text_nodes = context.xpath("./*[local-name()='endDate']/text()")
+            return \
+                (None, None) if context is None else \
+                (_date(instant_elements[0].text), _date(instant_elements[0].text)) if instant_elements else \
+                (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
+                (_date(start_date_text_nodes[0]), _date(end_date_text_nodes[0]))
 
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
-        contexts = _get_contexts(document)
-        value_by_period = OrderedDict()
-
-        # retrieve periodical attribute values
-        for attribute in PERIODICAL_XPATH_MAPPINGS:
-            _populate_periodical_attributes(document, contexts, attribute, value_by_period)
-
-        # if no periodical attributes found, create empty row for general attributes
-        if not value_by_period:
-            value_by_period[(None, None)] = [None] * len(columns)
+        context_dates = {
+            e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
+            for e in document.xpath("//*[local-name()='context']")
+        }
 
         fn = os.path.basename(name)
         mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
         run_code, company_id, date, filetype = mo.groups()
+        allowed_taxonomies = [
+            'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
+            'http://www.xbrl.org/uk/gaap/core/2009-09-01',
+            'http://xbrl.frc.org.uk/fr/2014-09-01/core',
+        ]
 
-        for period, row in value_by_period.items():
-            row[columns.index('run_code')] = run_code
-            row[columns.index('company_id')] = company_id
-            row[columns.index('date')] = dateutil.parser.parse(date).date()
-            row[columns.index('file_type')] = filetype
-            allowed_taxonomies = [
-                'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
-                'http://www.xbrl.org/uk/gaap/core/2009-09-01',
-                'http://xbrl.frc.org.uk/fr/2014-09-01/core',
-            ]
-            row[columns.index('taxonomy')] = ';'.join(
-                set(allowed_taxonomies) & set(document.getroot().nsmap.values())
-            )
-            row[columns.index('period_start')] = None if period[0] is None else dateutil.parser.parse(period[0]).date()
-            row[columns.index('period_end')] = None if period[1] is None else dateutil.parser.parse(period[1]).date()
-            for attribute in GENERAL_XPATH_MAPPINGS:
-                _populate_general_attributes(document, attribute, row)
-            yield row
+        core_attributes = (
+            run_code,
+            company_id,
+            _date(date),
+            filetype,
+            ';'.join(set(allowed_taxonomies) & set(document.getroot().nsmap.values())),
+        )
+        general_attributes = tuple(
+            next((value for value in _general_attributes(xpath_expressions, attribute) if value is not None), None)
+            for (name, (xpath_expressions, attribute)) in GENERAL_XPATH_MAPPINGS.items()
+        )
+
+        periodical_attributes_by_date_and_name = {
+            (dates, name): value
+            for (name, (xpath_expressions, attribute)) in PERIODICAL_XPATH_MAPPINGS.items()
+            for (dates, value) in _periodical_attributes(xpath_expressions, attribute)
+        }
+        period_dates = tuple(dict.fromkeys(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))
+        period_dates = reversed(sorted(list(set(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))))
+        periods = tuple((
+            period_start_end + tuple((
+                periodical_attributes_by_date_and_name.get((period_start_end, name))
+                for name, _ in PERIODICAL_XPATH_MAPPINGS.items()
+            ))
+            for period_start_end in period_dates
+        ))
+
+        yield from \
+            ((core_attributes + general_attributes + period) for period in periods) if periods else \
+            ((core_attributes + general_attributes + (None,) * (2 + len(PERIODICAL_XPATH_MAPPINGS))),)
 
     return tuple(columns), (
         row
