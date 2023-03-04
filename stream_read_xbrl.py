@@ -373,6 +373,16 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         }
         value_by_period = OrderedDict()
 
+        fn = os.path.basename(name)
+        mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
+        run_code, company_id, date, filetype = mo.groups()
+        core_attributes = (
+            ('run_code', run_code),
+            ('company_id', company_id),
+            ('date', dateutil.parser.parse(date).date()),
+            ('file_type', filetype),
+        )
+
         general_attributes = tuple(
             (name, next((value for value in _general_attributes(xpath_expressions, attribute) if value is not None), None))
             for (name, (xpath_expressions, attribute)) in GENERAL_XPATH_MAPPINGS.items()
@@ -386,15 +396,10 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         if not value_by_period:
             value_by_period[(None, None)] = [None] * len(columns)
 
-        fn = os.path.basename(name)
-        mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
-        run_code, company_id, date, filetype = mo.groups()
-
         for period, row in value_by_period.items():
-            row[columns.index('run_code')] = run_code
-            row[columns.index('company_id')] = company_id
-            row[columns.index('date')] = dateutil.parser.parse(date).date()
-            row[columns.index('file_type')] = filetype
+            for name, value in core_attributes:
+                row[columns.index(name)] = value
+
             allowed_taxonomies = [
                 'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
                 'http://www.xbrl.org/uk/gaap/core/2009-09-01',
