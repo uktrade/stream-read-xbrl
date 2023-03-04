@@ -30,7 +30,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 
     def _parse_decimal(element, text):
         sign = -1 if element.get('sign', '') == '-' else +1
-        return sign * Decimal(re.sub(r',', '', text)) * 10 ** int(element.get('scale', '0'))
+        return sign * Decimal(re.sub(r',', '', text)) * Decimal(10) ** Decimal(element.get('scale', '0'))
 
     def _parse_decimal_with_colon(element, text):
         return _parse(element, re.sub(r'.*: ', '', text), _parse_decimal)
