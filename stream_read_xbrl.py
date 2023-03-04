@@ -314,16 +314,15 @@ def stream_read_xbrl_zip(zip_bytes_iter):
 
     def xbrl_to_rows(name, xbrl_xml_str):
 
-        def _populate_general_attributes(document, attribute, row):
-            xpath_expressions = GENERAL_XPATH_MAPPINGS.get(attribute)[0]
-            for xpath in xpath_expressions:
-                # retrieve value only if not found already
-                if row[columns.index(attribute)] == None:
-                    for e in document.xpath(xpath):
-                        attr_type = _get_attribute_type(
-                            GENERAL_XPATH_MAPPINGS, attribute, xpath
-                        )
-                        row[columns.index(attribute)] = _parse(e, e.text, attr_type)
+        def _general_attributes(xpath_expressions, attr_type_maybe_list):
+            for i, xpath in enumerate(xpath_expressions):
+                attr_type = \
+                    attr_type_maybe_list[i] if isinstance(attr_type_maybe_list, list) else \
+                    attr_type_maybe_list
+                # Reversed so we choose the last non None in the document, which stands the best
+                # chance of being for the most recent period, so the current state of the company
+                for e in reversed(document.xpath(xpath)):
+                    yield _parse(e, e.text, attr_type)
 
         def _populate_periodical_attributes(document, context_dates, attribute, value_by_period):
             xpath_expressions = PERIODICAL_XPATH_MAPPINGS.get(attribute)[0]
@@ -374,6 +373,11 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         }
         value_by_period = OrderedDict()
 
+        general_attributes = tuple(
+            (name, next((value for value in _general_attributes(xpath_expressions, attribute) if value is not None), None))
+            for (name, (xpath_expressions, attribute)) in GENERAL_XPATH_MAPPINGS.items()
+        )
+
         # retrieve periodical attribute values
         for attribute in PERIODICAL_XPATH_MAPPINGS:
             _populate_periodical_attributes(document, context_dates, attribute, value_by_period)
@@ -401,8 +405,9 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             )
             row[columns.index('period_start')] = None if period[0] is None else dateutil.parser.parse(period[0]).date()
             row[columns.index('period_end')] = None if period[1] is None else dateutil.parser.parse(period[1]).date()
-            for attribute in GENERAL_XPATH_MAPPINGS:
-                _populate_general_attributes(document, attribute, row)
+            for name, value in general_attributes:
+                row[columns.index(name)] = value
+
             yield row
 
     return tuple(columns), (
