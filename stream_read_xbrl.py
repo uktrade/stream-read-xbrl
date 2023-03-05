@@ -1,4 +1,5 @@
 import datetime
+import multiprocessing
 import multiprocessing.pool
 import os
 import re
@@ -58,6 +59,25 @@ _COLUMNS = (
     'tax_on_profit_or_loss_on_ordinary_activities',
     'profit_loss_for_period',
 )
+
+
+@contextmanager
+def _get_default_pool():
+    # Based on https://stackoverflow.com/a/71503165/1319998 that allows the pool to run
+    # inside a daemon, for example in Airflow
+    p = multiprocessing.process.current_process()
+    daemon_status_set = 'daemon' in p._config
+    daemon_status_value = p._config.get('daemon')
+
+    if daemon_status_set:
+        del p._config['daemon']
+
+    try:
+        with multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)) as pool:
+             yield pool
+    finally:
+        if daemon_status_set:
+            p._config['daemon'] = daemon_status_value
 
 
 def _xbrl_to_rows(name_xbrl_xml_str):
@@ -485,7 +505,7 @@ def _xbrl_to_rows(name_xbrl_xml_str):
 @contextmanager
 def stream_read_xbrl_zip(
     zip_bytes_iter,
-    get_pool=lambda: multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)),
+    get_pool=_get_default_pool,
 ):
     with get_pool() as pool:
         yield _COLUMNS, (
@@ -499,7 +519,7 @@ def stream_read_xbrl_zip(
 def stream_read_xbrl_daily_all(
     url='http://download.companieshouse.gov.uk/en_accountsdata.html',
     get_client=lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3)),
-    get_pool=lambda: multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)),
+    get_pool=_get_default_pool,
     allow_404=True,
 ):
     with get_client() as client:
