@@ -59,16 +59,9 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             f"and substring-after(@name, ':{attr_value}') = '']"
         )
 
-    def _element_has_tag_name_or_name_attr_value(value):
-        return etree.XPath(
-            f"//*[local-name()='{value}' or (contains(@name, ':{value}') "
-            f"and substring-after(@name, ':{value}') = '')]"
-        )
-
     # aliases
     _tn = _element_has_tag_name
     _av = _element_has_name_attr_value
-    _tn_av = _element_has_tag_name_or_name_attr_value
 
     # {attribute: ([xpath_expressions], attribute_type)}
     #   attribute: identifier for financial attribute
@@ -126,28 +119,33 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         # balance sheet
         'tangible_fixed_assets': (
             [
-                _tn_av('FixedAssets'),
-                _tn_av('TangibleFixedAssets'),
+                _tn('FixedAssets'),
+                _av('FixedAssets'),
+                _tn('TangibleFixedAssets'),
+                _av('TangibleFixedAssets'),
                 _av('PropertyPlantEquipment'),
             ],
             _parse_decimal,
         ),
         'debtors': (
             [
-                _tn_av('Debtors'),
+                _tn('Debtors'),
+                _av('Debtors'),
             ],
             _parse_decimal,
         ),
         'cash_bank_in_hand': (
             [
-                _tn_av('CashBankInHand'),
+                _tn('CashBankInHand'),
+                _av('CashBankInHand'),
                 _av('CashBankOnHand'),
             ],
             _parse_decimal,
         ),
         'current_assets': (
             [
-                _tn_av('CurrentAssets'),
+                _tn('CurrentAssets'),
+                _av('CurrentAssets'),
             ],
             _parse_decimal,
         ),
@@ -173,26 +171,31 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         ),
         'net_current_assets_liabilities': (
             [
-                _tn_av('NetCurrentAssetsLiabilities'),
+                _tn('NetCurrentAssetsLiabilities'),
+                _av('NetCurrentAssetsLiabilities'),
             ],
             _parse_decimal,
         ),
         'total_assets_less_current_liabilities': (
             [
-                _tn_av('TotalAssetsLessCurrentLiabilities'),
+                _tn('TotalAssetsLessCurrentLiabilities'),
+                _av('TotalAssetsLessCurrentLiabilities'),
             ],
             _parse_decimal,
         ),
         'net_assets_liabilities_including_pension_asset_liability': (
             [
-                _tn_av('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
-                _tn_av('NetAssetsLiabilities'),
+                _tn('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
+                _av('NetAssetsLiabilitiesIncludingPensionAssetLiability'),
+                _tn('NetAssetsLiabilities'),
+                _av('NetAssetsLiabilities'),
             ],
             _parse_decimal,
         ),
         'called_up_share_capital': (
             [
-                _tn_av('CalledUpShareCapital'),
+                _tn('CalledUpShareCapital'),
+                _av('CalledUpShareCapital'),
                 etree.XPath(
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and contains(@contextRef, 'ShareCapital')]"
@@ -202,7 +205,8 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         ),
         'profit_loss_account_reserve': (
             [
-                _tn_av('ProfitLossAccountReserve'),
+                _tn('ProfitLossAccountReserve'),
+                _av('ProfitLossAccountReserve'),
                 etree.XPath(
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and contains(@contextRef, 'RetainedEarningsAccumulatedLosses')]"
@@ -212,7 +216,8 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         ),
         'shareholder_funds': (
             [
-                _tn_av('ShareholderFunds'),
+                _tn('ShareholderFunds'),
+                _av('ShareholderFunds'),
                 etree.XPath(
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and not(contains(@contextRef, 'segment'))]"
@@ -223,87 +228,108 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         # income statement
         'turnover_gross_operating_revenue': (
             [
-                _tn_av('TurnoverGrossOperatingRevenue'),
-                _tn_av('TurnoverRevenue'),
+                _tn('TurnoverGrossOperatingRevenue'),
+                _av('TurnoverGrossOperatingRevenue'),
+                _tn('TurnoverRevenue'),
+                _av('TurnoverRevenue'),
             ],
             _parse_decimal,
         ),
         'other_operating_income': (
             [
-                _tn_av('OtherOperatingIncome'),
-                _tn_av('OtherOperatingIncomeFormat2'),
+                _tn('OtherOperatingIncome'),
+                _av('OtherOperatingIncome'),
+                _tn('OtherOperatingIncomeFormat2'),
+                _av('OtherOperatingIncomeFormat2'),
             ],
             _parse_decimal,
         ),
         'cost_sales': (
             [
-                _tn_av('CostSales'),
+                _tn('CostSales'),
+                _av('CostSales'),
             ],
             _parse_decimal,
         ),
         'gross_profit_loss': (
             [
-                _tn_av('GrossProfitLoss'),
+                _tn('GrossProfitLoss'),
+                _av('GrossProfitLoss'),
             ],
             _parse_decimal,
         ),
         'administrative_expenses': (
             [
-                _tn_av('AdministrativeExpenses'),
+                _tn('AdministrativeExpenses'),
+                _av('AdministrativeExpenses'),
             ],
             _parse_decimal,
         ),
         'raw_materials_consumables': (
             [
-                _tn_av('RawMaterialsConsumables'),
-                _tn_av('RawMaterialsConsumablesUsed'),
+                _tn('RawMaterialsConsumables'),
+                _av('RawMaterialsConsumables'),
+                _tn('RawMaterialsConsumablesUsed'),
+                _av('RawMaterialsConsumablesUsed'),
             ],
             _parse_decimal,
         ),
         'staff_costs': (
             [
-                _tn_av('StaffCosts'),
-                _tn_av('StaffCostsEmployeeBenefitsExpense'),
+                _tn('StaffCosts'),
+                _av('StaffCosts'),
+                _tn('StaffCostsEmployeeBenefitsExpense'),
+                _av('StaffCostsEmployeeBenefitsExpense'),
             ],
             _parse_decimal,
         ),
         'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets': (
             [
-                _tn_av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
-                _tn_av('DepreciationAmortisationImpairmentExpense'),
+                _tn('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
+                _av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'),
+                _tn('DepreciationAmortisationImpairmentExpense'),
+                _av('DepreciationAmortisationImpairmentExpense'),
             ],
             _parse_decimal,
         ),
         'other_operating_charges_format2': (
             [
-                _tn_av('OtherOperatingChargesFormat2'),
-                _tn_av('OtherOperatingExpensesFormat2'),
+                _tn('OtherOperatingChargesFormat2'),
+                _av('OtherOperatingChargesFormat2'),
+                _tn('OtherOperatingExpensesFormat2'),
+                _av('OtherOperatingExpensesFormat2'),
             ],
             _parse_decimal,
         ),
         'operating_profit_loss': (
             [
-                _tn_av('OperatingProfitLoss'),
+                _tn('OperatingProfitLoss'),
+                _av('OperatingProfitLoss'),
             ],
             _parse_decimal,
         ),
         'profit_loss_on_ordinary_activities_before_tax': (
             [
-                _tn_av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
+                _tn('ProfitLossOnOrdinaryActivitiesBeforeTax'),
+                _av('ProfitLossOnOrdinaryActivitiesBeforeTax'),
             ],
             _parse_decimal,
         ),
         'tax_on_profit_or_loss_on_ordinary_activities': (
             [
-                _tn_av('TaxOnProfitOrLossOnOrdinaryActivities'),
-                _tn_av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
+                _tn('TaxOnProfitOrLossOnOrdinaryActivities'),
+                _av('TaxOnProfitOrLossOnOrdinaryActivities'),
+                _tn('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
+                _av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'),
             ],
             _parse_decimal,
         ),
         'profit_loss_for_period': (
             [
-                _tn_av('ProfitLoss'),
-                _tn_av('ProfitLossForPeriod'),
+                _tn('ProfitLoss'),
+                _av('ProfitLoss'),
+                _tn('ProfitLossForPeriod'),
+                _av('ProfitLossForPeriod'),
             ],
             _parse_decimal,
         ),
