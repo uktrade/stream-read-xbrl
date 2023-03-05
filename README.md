@@ -5,6 +5,8 @@
 
 
 Python package to parse Companies House accounts data in a streaming way. It converts the zipped XBRL format that Companies House supplies into a single data frame of 37 columns.
+
+It takes approximately 60 to 90 seconds to convert a single day of Companies House accounts data using stream-read-xbrl. 
 <!-- --8<-- [end:intro] -->
 
 
