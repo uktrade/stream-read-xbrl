@@ -498,7 +498,7 @@ def stream_read_xbrl_zip(
 @contextmanager
 def stream_read_xbrl_daily_all(
     url='http://download.companieshouse.gov.uk/en_accountsdata.html',
-    get_client=lambda: httpx.Client(transport=httpx.HTTPTransport(retries=3)),
+    get_client=lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3)),
     get_pool=lambda: multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)),
     allow_404=True,
 ):
