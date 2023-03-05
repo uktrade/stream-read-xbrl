@@ -502,9 +502,7 @@ def stream_read_xbrl_daily_all(
     get_pool=lambda: multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)),
     allow_404=True,
 ):
-    with \
-            get_client() as client, \
-            get_pool() as pool:
+    with get_client() as client:
         all_links = BeautifulSoup(httpx.get(url).content, "html.parser").find_all('a')
         zip_urls = [
             link.attrs['href'] if link.attrs['href'].strip().startswith('http://') or link.attrs['href'].strip().startswith('https://') else
@@ -526,7 +524,7 @@ def stream_read_xbrl_daily_all(
                                 pass
                             continue
 
-                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), get_pool=lambda: pool) as (_, rows):
+                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), get_pool=get_pool) as (_, rows):
                         yield from rows
 
         yield _COLUMNS, rows()
