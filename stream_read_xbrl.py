@@ -349,9 +349,9 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             end_date_text_nodes = context.xpath("./*[local-name()='endDate']/text()")
             return \
                 (None, None) if context is None else \
-                (_date(instant_elements[0].text), _date(instant_elements[0].text)) if instant_elements else \
+                (instant_elements[0].text.strip(), instant_elements[0].text.strip()) if instant_elements else \
                 (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
-                (_date(start_date_text_nodes[0]), _date(end_date_text_nodes[0]))
+                (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
 
         document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
         context_dates = {
@@ -387,7 +387,8 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         }
         period_dates = reversed(sorted(list(set(dates for (dates, _) in periodical_attributes_by_date_and_name.keys()))))
         periods = tuple((
-            period_start_end + tuple((
+            (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
+            + tuple((
                 periodical_attributes_by_date_and_name.get((period_start_end, name))
                 for name, _ in PERIODICAL_XPATH_MAPPINGS.items()
             ))
