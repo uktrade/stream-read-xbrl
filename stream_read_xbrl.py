@@ -1,4 +1,5 @@
 import datetime
+import multiprocessing.pool
 import os
 import re
 import urllib.parse
@@ -18,8 +19,49 @@ from lxml import etree
 from lxml.etree import XMLSyntaxError
 from stream_unzip import stream_unzip
 
+_COLUMNS = (
+    'run_code',
+    'company_id',
+    'date',
+    'file_type',
+    'taxonomy',
+    'balance_sheet_date',
+    'companies_house_registered_number',
+    'entity_current_legal_name',
+    'company_dormant',
+    'average_number_employees_during_period',
+    'period_start',
+    'period_end',
+    'tangible_fixed_assets',
+    'debtors',
+    'cash_bank_in_hand',
+    'current_assets',
+    'creditors_due_within_one_year',
+    'creditors_due_after_one_year',
+    'net_current_assets_liabilities',
+    'total_assets_less_current_liabilities',
+    'net_assets_liabilities_including_pension_asset_liability',
+    'called_up_share_capital',
+    'profit_loss_account_reserve',
+    'shareholder_funds',
+    'turnover_gross_operating_revenue',
+    'other_operating_income',
+    'cost_sales',
+    'gross_profit_loss',
+    'administrative_expenses',
+    'raw_materials_consumables',
+    'staff_costs',
+    'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets',
+    'other_operating_charges_format2',
+    'operating_profit_loss',
+    'profit_loss_on_ordinary_activities_before_tax',
+    'tax_on_profit_or_loss_on_ordinary_activities',
+    'profit_loss_for_period',
+)
 
-def stream_read_xbrl_zip(zip_bytes_iter):
+
+def _xbrl_to_rows(name_xbrl_xml_str):
+    name, xbrl_xml_str = name_xbrl_xml_str
 
     # Low level value parsers
 
@@ -323,145 +365,146 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         if isinstance(test, _custom)
     )
 
-    # columns names used to store the companies financial attributes
-    columns = (
-        ['run_code', 'company_id', 'date', 'file_type', 'taxonomy']
-        + [key for key in GENERAL_XPATH_MAPPINGS.keys()]
-        + ['period_start', 'period_end'] + [key for key in PERIODICAL_XPATH_MAPPINGS.keys()]
+    def _get_dates(context):
+        instant_elements = context.xpath("./*[local-name()='instant']")
+        start_date_text_nodes = context.xpath("./*[local-name()='startDate']/text()")
+        end_date_text_nodes = context.xpath("./*[local-name()='endDate']/text()")
+        return \
+            (None, None) if context is None else \
+            (instant_elements[0].text.strip(), instant_elements[0].text.strip()) if instant_elements else \
+            (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
+            (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
+
+    document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
+    context_dates = {
+        e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
+        for e in document.xpath("//*[local-name()='context']")
+    }
+
+    fn = os.path.basename(name)
+    mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
+    run_code, company_id, date, filetype = mo.groups()
+    allowed_taxonomies = [
+        'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
+        'http://www.xbrl.org/uk/gaap/core/2009-09-01',
+        'http://xbrl.frc.org.uk/fr/2014-09-01/core',
+    ]
+
+    core_attributes = (
+        run_code,
+        company_id,
+        _date(date),
+        filetype,
+        ';'.join(set(allowed_taxonomies) & set(document.getroot().nsmap.values())),
     )
 
-    def xbrl_to_rows(name, xbrl_xml_str):
+    # Mutable dictionaries to store the "priority" (lower is better) of a found value
+    general_attributes_with_priorities = {
+        name: (10, None)
+        for name in GENERAL_XPATH_MAPPINGS.keys()
+    }
+    periodic_attributes_with_priorities = defaultdict(lambda: {
+        name: (10, None)
+        for name in PERIODICAL_XPATH_MAPPINGS.keys()
+    })
 
-        def _get_dates(context):
-            instant_elements = context.xpath("./*[local-name()='instant']")
-            start_date_text_nodes = context.xpath("./*[local-name()='startDate']/text()")
-            end_date_text_nodes = context.xpath("./*[local-name()='endDate']/text()")
-            return \
-                (None, None) if context is None else \
-                (instant_elements[0].text.strip(), instant_elements[0].text.strip()) if instant_elements else \
-                (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
-                (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
+    def tag_name_tests(local_name):
+        try:
+            yield from (TAG_NAME_TESTS[local_name],)
+        except KeyError:
+            pass
 
-        document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
-        context_dates = {
-            e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
-            for e in document.xpath("//*[local-name()='context']")
-        }
+    def attribute_value_tests(attribute_value):
+        try:
+            yield from (ATTRIBUTE_VALUE_TESTS[attribute_value],)
+        except KeyError:
+            pass
 
-        fn = os.path.basename(name)
-        mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
-        run_code, company_id, date, filetype = mo.groups()
-        allowed_taxonomies = [
-            'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
-            'http://www.xbrl.org/uk/gaap/core/2009-09-01',
-            'http://xbrl.frc.org.uk/fr/2014-09-01/core',
-        ]
+    def handle_general(element, local_name, attribute_value, context_ref, name, priority, test, parse):
+        best_priority, best_value = general_attributes_with_priorities[name]
 
-        core_attributes = (
-            run_code,
-            company_id,
-            _date(date),
-            filetype,
-            ';'.join(set(allowed_taxonomies) & set(document.getroot().nsmap.values())),
-        )
+        if priority > best_priority:
+            return
 
-        # Mutable dictionaries to store the "priority" (lower is better) of a found value
-        general_attributes_with_priorities = {
-            name: (10, None)
-            for name in GENERAL_XPATH_MAPPINGS.keys()
-        }
-        periodic_attributes_with_priorities = defaultdict(lambda: {
-            name: (10, None)
+        for element in test.search(element, local_name, attribute_value, context_ref):
+            value = _parse(element, element.text, parse)
+            if value is not None:
+                general_attributes_with_priorities[name] = (priority, value)
+                break
+
+    def handle_periodic(element, local_name, attribute_value, context_ref, name, priority, test, parse):
+        if not context_ref:
+            return
+        dates = context_dates[context_ref]
+        if not dates:
+            return
+
+        for element in test.search(element, local_name, attribute_value, context_ref):
+            best_priority, best_value = periodic_attributes_with_priorities[dates][name]
+
+            if priority >= best_priority:
+                return
+
+            value = _parse(element, element.text, parse)
+            if value is not None:
+                periodic_attributes_with_priorities[dates][name] = (priority, value)
+                break
+
+    for element in document.xpath('//*'):
+        _, _, local_name = element.tag.rpartition('}')
+        _, _, attribute_value = element.get('name', '').rpartition(':')
+        context_ref = element.get('contextRef', '')
+
+        for name, priority, test, parse in chain(tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS):
+            handler = \
+                handle_general if name in general_attributes_with_priorities else \
+                handle_periodic
+
+            handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
+
+    general_attributes = tuple(
+        general_attributes_with_priorities[name][1]
+        for name in GENERAL_XPATH_MAPPINGS.keys()
+    )
+
+    periods = tuple(
+        (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
+        + tuple(
+            periodic_attributes[name][1]
             for name in PERIODICAL_XPATH_MAPPINGS.keys()
-        })
-
-        def tag_name_tests(local_name):
-            try:
-                yield from (TAG_NAME_TESTS[local_name],)
-            except KeyError:
-                pass
-
-        def attribute_value_tests(attribute_value):
-            try:
-                yield from (ATTRIBUTE_VALUE_TESTS[attribute_value],)
-            except KeyError:
-                pass
-
-        def handle_general(element, local_name, attribute_value, context_ref, name, priority, test, parse):
-            best_priority, best_value = general_attributes_with_priorities[name]
-
-            if priority > best_priority:
-                return
-
-            for element in test.search(element, local_name, attribute_value, context_ref):
-                value = _parse(element, element.text, parse)
-                if value is not None:
-                    general_attributes_with_priorities[name] = (priority, value)
-                    break
-
-        def handle_periodic(element, local_name, attribute_value, context_ref, name, priority, test, parse):
-            if not context_ref:
-                return
-            dates = context_dates[context_ref]
-            if not dates:
-                return
-
-            for element in test.search(element, local_name, attribute_value, context_ref):
-                best_priority, best_value = periodic_attributes_with_priorities[dates][name]
-
-                if priority >= best_priority:
-                    return
-
-                value = _parse(element, element.text, parse)
-                if value is not None:
-                    periodic_attributes_with_priorities[dates][name] = (priority, value)
-                    break
-
-        for element in document.xpath('//*'):
-            _, _, local_name = element.tag.rpartition('}')
-            _, _, attribute_value = element.get('name', '').rpartition(':')
-            context_ref = element.get('contextRef', '')
-
-            for name, priority, test, parse in chain(tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS):
-                handler = \
-                    handle_general if name in general_attributes_with_priorities else \
-                    handle_periodic
-
-                handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
-
-        general_attributes = tuple(
-            general_attributes_with_priorities[name][1]
-            for name in GENERAL_XPATH_MAPPINGS.keys()
         )
-
-        periods = tuple(
-            (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
-            + tuple(
-                periodic_attributes[name][1]
-                for name in PERIODICAL_XPATH_MAPPINGS.keys()
-            )
-            for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
-        )
-        sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
-
-        yield from \
-            ((core_attributes + general_attributes + period) for period in sorted_periods) if sorted_periods else \
-            ((core_attributes + general_attributes + (None,) * (2 + len(PERIODICAL_XPATH_MAPPINGS))),)
-
-    return tuple(columns), (
-        row
-        for name, _, chunks in stream_unzip(zip_bytes_iter)
-        for row in xbrl_to_rows(name.decode(), BytesIO(b''.join(chunks)))
+        for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
     )
+    sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
+
+    return \
+        tuple((core_attributes + general_attributes + period) for period in sorted_periods) if sorted_periods else \
+        ((core_attributes + general_attributes + (None,) * (2 + len(PERIODICAL_XPATH_MAPPINGS))),)
+
+
+@contextmanager
+def stream_read_xbrl_zip(
+    zip_bytes_iter,
+    get_pool=lambda: multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)),
+):
+    with get_pool() as pool:
+        yield _COLUMNS, (
+            row
+            for results in pool.imap(_xbrl_to_rows, ((name.decode(), BytesIO(b''.join(chunks))) for name, _, chunks in stream_unzip(zip_bytes_iter)))
+            for row in results
+        )
 
 
 @contextmanager
 def stream_read_xbrl_daily_all(
     url='http://download.companieshouse.gov.uk/en_accountsdata.html',
     get_client=lambda: httpx.Client(transport=httpx.HTTPTransport(retries=3)),
+    get_pool=lambda: multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)),
     allow_404=True,
 ):
-    with get_client() as client:
+    with \
+            get_client() as client, \
+            get_pool() as pool:
         all_links = BeautifulSoup(httpx.get(url).content, "html.parser").find_all('a')
         zip_urls = [
             link.attrs['href'] if link.attrs['href'].strip().startswith('http://') or link.attrs['href'].strip().startswith('https://') else
@@ -483,10 +526,7 @@ def stream_read_xbrl_daily_all(
                                 pass
                             continue
 
-                    _, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
-                    yield from rows
+                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), get_pool=lambda: pool) as (_, rows):
+                        yield from rows
 
-        # Allows us to get the columns before actually iterating the real data
-        columns, _ = stream_read_xbrl_zip(())
-
-        yield columns, rows()
+        yield _COLUMNS, rows()
