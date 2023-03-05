@@ -538,19 +538,7 @@ def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
     with \
             httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        a = tuple((dict(zip(columns, row)) for row in rows))
-        print(len(a), len(expected_data))
-
-        for r in a:
-            print(r['company_id'], r['period_start'])
-
-        print('----')
-
-        for r in expected_data:
-            print(r['company_id'], r['period_start'])
-
-        assert a == expected_data
-
+        assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
 
 def test_stream_read_xbrl_daily_all(
@@ -558,7 +546,5 @@ def test_stream_read_xbrl_daily_all(
     mock_companies_house_daily_zip,
     mock_companies_house_daily_zip_404,
 ):
-    count = 0
-
     with stream_read_xbrl_daily_all() as (columns, rows):
         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
