@@ -552,12 +552,12 @@ def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
 
 
 
-# def test_stream_read_xbrl_daily_all(
-#     mock_companies_house_daily_html,
-#     mock_companies_house_daily_zip,
-#     mock_companies_house_daily_zip_404,
-# ):
-#     count = 0
+def test_stream_read_xbrl_daily_all(
+    mock_companies_house_daily_html,
+    mock_companies_house_daily_zip,
+    mock_companies_house_daily_zip_404,
+):
+    count = 0
 
-#     with stream_read_xbrl_daily_all() as (columns, rows):
-#         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
+    with stream_read_xbrl_daily_all() as (columns, rows):
+        assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
