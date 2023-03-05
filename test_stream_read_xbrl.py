@@ -535,8 +535,9 @@ def mock_companies_house_daily_html(httpx_mock):
 
 
 def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
-    with httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r:
-        columns, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
+    with \
+            httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
+            stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
         a = tuple((dict(zip(columns, row)) for row in rows))
         print(len(a), len(expected_data))
 

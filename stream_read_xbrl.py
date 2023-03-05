@@ -19,6 +19,7 @@ from lxml.etree import XMLSyntaxError
 from stream_unzip import stream_unzip
 
 
+@contextmanager
 def stream_read_xbrl_zip(zip_bytes_iter):
 
     # Low level value parsers
@@ -448,12 +449,11 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             ((core_attributes + general_attributes + period) for period in sorted_periods) if sorted_periods else \
             ((core_attributes + general_attributes + (None,) * (2 + len(PERIODICAL_XPATH_MAPPINGS))),)
 
-    return tuple(columns), (
+    yield tuple(columns), (
         row
         for name, _, chunks in stream_unzip(zip_bytes_iter)
         for row in xbrl_to_rows(name.decode(), BytesIO(b''.join(chunks)))
     )
-
 
 @contextmanager
 def stream_read_xbrl_daily_all(
@@ -483,10 +483,11 @@ def stream_read_xbrl_daily_all(
                                 pass
                             continue
 
-                    _, rows = stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536))
-                    yield from rows
+                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (_, rows):
+                        yield from rows
 
         # Allows us to get the columns before actually iterating the real data
-        columns, _ = stream_read_xbrl_zip(())
+        with stream_read_xbrl_zip(()) as (columns, _):
+            pass
 
         yield columns, rows()
