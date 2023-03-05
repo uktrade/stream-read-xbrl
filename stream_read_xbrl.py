@@ -334,10 +334,10 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     attr_type_maybe_list[i] if isinstance(attr_type_maybe_list, list) else \
                     attr_type_maybe_list
                 for e in reversed(xpath(document)):
-                    context_ref_attr = e.xpath('@contextRef')
+                    context_ref_attr = e.get('contextRef')
                     if not context_ref_attr:
                         continue
-                    dates = context_dates[context_ref_attr[0]]
+                    dates = context_dates[context_ref_attr]
                     if not dates:
                         continue
                     value = _parse(e, e.text, attr_type)
