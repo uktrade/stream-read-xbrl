@@ -51,16 +51,16 @@ def stream_read_xbrl_zip(zip_bytes_iter):
     # XPATH helpers
     # XML element syntax: <ns:name attribute='value'>content</ns:name>
     def _element_has_tag_name(name):
-        return f"//*[local-name()='{name}']"
+        return etree.XPath(f"//*[local-name()='{name}']")
 
     def _element_has_name_attr_value(attr_value):
-        return (
+        return etree.XPath(
             f"//*[contains(@name, ':{attr_value}') "
             f"and substring-after(@name, ':{attr_value}') = '']"
         )
 
     def _element_has_tag_name_or_name_attr_value(value):
-        return (
+        return etree.XPath(
             f"//*[local-name()='{value}' or (contains(@name, ':{value}') "
             f"and substring-after(@name, ':{value}') = '')]"
         )
@@ -94,7 +94,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
             [
                 _av('EntityCurrentLegalOrRegisteredName'),
                 _tn('EntityCurrentLegalName'),
-                (
+                etree.XPath(
                     "(//*[contains(@name, ':EntityCurrentLegalOrRegisteredName') "
                     "and substring-after(@name, ':EntityCurrentLegalOrRegisteredName') = '']"
                     "//*[local-name()='span'])[1]"
@@ -154,7 +154,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         'creditors_due_within_one_year': (
             [
                 _av('CreditorsDueWithinOneYear'),
-                (
+                etree.XPath(
                     "//*[contains(@name, ':Creditors') and substring-after(@name, ':Creditors')"
                     " = '' and contains(@contextRef, 'WithinOneYear')]"
                 ),
@@ -164,7 +164,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         'creditors_due_after_one_year': (
             [
                 _av('CreditorsDueAfterOneYear'),
-                (
+                etree.XPath(
                     "//*[contains(@name, ':Creditors') and substring-after(@name, ':Creditors')"
                     " = '' and contains(@contextRef, 'AfterOneYear')]"
                 ),
@@ -193,7 +193,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         'called_up_share_capital': (
             [
                 _tn_av('CalledUpShareCapital'),
-                (
+                etree.XPath(
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and contains(@contextRef, 'ShareCapital')]"
                 ),
@@ -203,7 +203,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         'profit_loss_account_reserve': (
             [
                 _tn_av('ProfitLossAccountReserve'),
-                (
+                etree.XPath(
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and contains(@contextRef, 'RetainedEarningsAccumulatedLosses')]"
                 ),
@@ -213,7 +213,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
         'shareholder_funds': (
             [
                 _tn_av('ShareholderFunds'),
-                (
+                etree.XPath(
                     "//*[contains(@name, ':Equity') and substring-after(@name, ':Equity') = '' "
                     "and not(contains(@contextRef, 'segment'))]"
                 ),
@@ -325,7 +325,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                     attr_type_maybe_list
                 # Reversed so we choose the last non None in the document, which stands the best
                 # chance of being for the most recent period, so the current state of the company
-                for e in reversed(document.xpath(xpath)):
+                for e in reversed(xpath(document)):
                     yield _parse(e, e.text, attr_type)
 
         def _periodical_attributes(xpath_expressions, attr_type_maybe_list):
@@ -333,7 +333,7 @@ def stream_read_xbrl_zip(zip_bytes_iter):
                 attr_type = \
                     attr_type_maybe_list[i] if isinstance(attr_type_maybe_list, list) else \
                     attr_type_maybe_list
-                for e in reversed(document.xpath(xpath)):
+                for e in reversed(xpath(document)):
                     context_ref_attr = e.xpath('@contextRef')
                     if not context_ref_attr:
                         continue
