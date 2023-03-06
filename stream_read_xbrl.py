@@ -548,3 +548,21 @@ def stream_read_xbrl_daily_all(
                         yield from rows
 
         yield _COLUMNS, rows()
+
+
+@contextmanager
+def stream_read_xbrl_sync(
+    latest_completed_date=datetime.date(datetime.MINYEAR, 1, 1),
+):
+    dummy_list_to_ingest = [
+        (datetime.date(2021, 5, 2), (('1', '2'), ('3', '4'))),
+        (datetime.date(2022, 2, 8), (('5', '6'), ('7', '8'))),
+    ]
+
+    def _final_date_and_rows():
+       for final_date, rows in dummy_list_to_ingest:
+            if final_date < latest_completed_date:
+                continue  # Skip since the file has no data we need
+            yield (final_date, rows)
+
+    yield (('a, b'), _final_date_and_rows())
