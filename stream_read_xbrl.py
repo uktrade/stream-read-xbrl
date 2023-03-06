@@ -550,7 +550,10 @@ def stream_read_xbrl_daily_all(
         yield _COLUMNS, rows()
 
 @contextmanager
-def stream_read_xbrl_sync(ingest_data_after_date):
+def stream_read_xbrl_sync(
+    ingest_data_after_date,
+    get_client = lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3))
+):
     list_to_ingest = []
 
     data_urls = [
@@ -558,9 +561,8 @@ def stream_read_xbrl_sync(ingest_data_after_date):
         'http://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html',
         'http://download.companieshouse.gov.uk/en_monthlyaccountsdata.html'
     ]
-    get_client = lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3))
 
-    with get_client() as client:
+    with get_client():
         zip_urls = []
         for data_url in data_urls:
             all_links = BeautifulSoup(httpx.get(data_url).content, 'html.parser').find_all('a')
@@ -579,7 +581,7 @@ def stream_read_xbrl_sync(ingest_data_after_date):
 
             if 'JanToDec' in file_name_no_ext or 'JanuaryToDecember' in file_name_no_ext:
                 file_name_no_ext = os.path.splitext(url)[0]
-                year = file_name_no_ext[-4]
+                year = file_name_no_ext[-4:]
                 latest_file_date = datetime.date(int(year), 12, 31)
                 if latest_file_date > ingest_data_after_date:
                     list_to_ingest.append(url)

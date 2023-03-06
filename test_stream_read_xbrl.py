@@ -540,27 +540,25 @@ def mock_companies_house_daily_html(httpx_mock):
     )
 
 @pytest.fixture
-def mock_zip_urls():
-    mocked_data = [
-            "Accounts_Monthly_Data-JanToDec2008.zip",
-            "Accounts_Monthly_Data-January2022.zip",
-            "Accounts_Monthly_Data-February2022.zip",
-            "Accounts_Monthly_Data-March2022.zip",
-            "Accounts_Monthly_Data-April2022.zip",
-            "Accounts_Monthly_Data-May2022.zip",
-            "Accounts_Monthly_Data-June2022.zip",
-            "Accounts_Monthly_Data-July2022.zip",
-            "Accounts_Bulk_Data-2023-03-02.zip",
-            "Accounts_Bulk_Data-2023-03-01.zip",
-            "Accounts_Bulk_Data-2023-02-28.zip",
-            "Accounts_Bulk_Data-2023-02-25.zip",
-            "Accounts_Bulk_Data-2023-02-24.zip",
-            "Accounts_Bulk_Data-2023-02-23.zip",
-            "Accounts_Bulk_Data-2023-02-22.zip",
-            "Accounts_Bulk_Data-2023-02-21.zip",
-        ]
-    with patch("stream_read_xbrl.stream_read_xbrl_sync.zip_urls", mocked_data):
-        yield
+def mock_companies_house_monthly_html(httpx_mock):
+    httpx_mock.add_response(
+        url='http://download.companieshouse.gov.uk/en_monthlyaccountsdata.html',
+        content=b'''
+            <a href="Accounts_Monthly_Data-July2022.zip">Link</a>
+            <a href="does-not-exist.zip">Link</a>
+        ''',
+    )
+
+@pytest.fixture
+def mock_companies_house_historic_html(httpx_mock):
+    httpx_mock.add_response(
+        url='http://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html',
+        content=b'''
+            <a href="Accounts_Monthly_Data-JanuaryToDecember2008.zip">Link</a>
+            <a href="Accounts_Monthly_Data-JanToDec2009.zip">Link</a>
+            <a href="does-not-exist.zip">Link</a>
+        ''',
+    )
 
 def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
     with \
@@ -577,24 +575,17 @@ def test_stream_read_xbrl_daily_all(
     with stream_read_xbrl_daily_all() as (columns, rows):
         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
-def test_stream_read_xbrl_sync():
+def test_stream_read_xbrl_sync( 
+    mock_companies_house_daily_html,
+    mock_companies_house_monthly_html,
+    mock_companies_house_historic_html,
+):
     expected_result = [
-        'Accounts_Monthly_Data-January2022.zip',
-        'Accounts_Monthly_Data-February2022.zip',
-        'Accounts_Monthly_Data-March2022.zip',
-        'Accounts_Monthly_Data-April2022.zip',
-        'Accounts_Monthly_Data-May2022.zip',
-        'Accounts_Monthly_Data-June2022.zip',
-        'Accounts_Monthly_Data-July2022.zip',
-        'Accounts_Bulk_Data-2023-03-02.zip',
-        'Accounts_Bulk_Data-2023-03-01.zip',
-        'Accounts_Bulk_Data-2023-02-28.zip',
-        'Accounts_Bulk_Data-2023-02-25.zip',
-        'Accounts_Bulk_Data-2023-02-24.zip',
-        'Accounts_Bulk_Data-2023-02-23.zip',
-        'Accounts_Bulk_Data-2023-02-22.zip',
-        'Accounts_Bulk_Data-2023-02-21.zip'
+        'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip',
+        'http://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip',
+        'http://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip',
+        'http://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip',
     ]
-    ingest_data_after_date = datetime.date(2022, 1, 1)
+    ingest_data_after_date = datetime.date(2007, 1, 1)
     with stream_read_xbrl_sync(ingest_data_after_date) as result:
         assert result == expected_result
