@@ -600,4 +600,4 @@ def stream_read_xbrl_sync(ingest_data_after_date):
             if latest_file_date > ingest_data_after_date:
                 list_to_ingest.append(file_name)
 
-    return list_to_ingest
+    yield list_to_ingest
