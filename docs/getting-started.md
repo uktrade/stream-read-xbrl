@@ -86,4 +86,22 @@ The `final_zip_date` can be passed to the next call of `stream_read_xbrl_sync` i
 
 This function can take many hours, even days. To handle the case of the process being interrupted, once the inner `rows` iterable has iterated to completion, the `final_zip_date` can be saved, and used in the next call to `stream_read_xbrl_sync` to pick up close to where it left off.
 
-It is possible that in such a process data will be repeated, especially if `stream_read_xbrl_sync` is called infrequently.
+It is possible that in such a process data will be repeated, especially if `stream_read_xbrl_sync` is called infrequently. Running the function approximately once a day would minimise the risk of this.
+
+
+### Regularly syncing data to S3
+
+A higher level utility function is provided that saves CSV data to under a prefix in a bucket in S3.
+
+```python
+import boto3
+from stream_read_xbrl import stream_read_xbrl_sync_s3_csv
+
+s3_client = boto3.client('s3', region_name='eu-west-2')
+bucket_name = 'my-bucket'
+key_prefix = 'my-folder/'  # Would usually end in a /
+
+stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
+```
+
+This can be called regularly to keep the bucket updated with recent data. Under the hood, `stream_read_xbrl_sync` is used, and the same caveats apply. Specifically, data may be repeated in the bucket, especially if the function is called infrequently.
