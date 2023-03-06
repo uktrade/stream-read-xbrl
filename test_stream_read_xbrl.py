@@ -2,13 +2,16 @@ import re
 from datetime import date
 from decimal import Decimal
 
+import boto3
 import httpx
 import pytest
+from moto import mock_s3
 
 from stream_read_xbrl import (
     stream_read_xbrl_zip,
     stream_read_xbrl_daily_all,
     stream_read_xbrl_sync,
+    stream_read_xbrl_sync_s3_csv,
 )
 
 expected_data = ({
@@ -594,3 +597,39 @@ def test_stream_read_xbrl_sync():
         assert tuple((
             (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
         )) == ()
+
+
+@mock_s3
+def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty():
+    region_name = 'eu-west-2'
+    bucket_name = 'my-bucket'
+    key_prefix = 'my-prefix/'  # Would usually end in a forward slash
+
+    s3_client = boto3.client('s3', region_name=region_name)
+    s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={
+        'LocationConstraint': region_name,
+    })
+
+    stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
+
+    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2021-05-02.csv')['Body'].read() == b'"a","b"\r\n"1","2"\r\n"3","4"\r\n'
+    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-02-08.csv')['Body'].read() == b'"a","b"\r\n"5","6"\r\n"7","8"\r\n'
+
+
+@mock_s3
+def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone():
+    region_name = 'eu-west-2'
+    bucket_name = 'my-bucket'
+    key_prefix = 'my-prefix/'  # Would usually end in a forward slash
+
+    s3_client = boto3.client('s3', region_name=region_name)
+    s3_client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={
+        'LocationConstraint': region_name,
+    })
+
+    s3_client.put_object(Bucket=bucket_name, Key=f'{key_prefix}2021-05-02.csv', Body='should-not-be-overwritten')
+
+    stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
+
+    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2021-05-02.csv')['Body'].read() == b'should-not-be-overwritten'
+    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-02-08.csv')['Body'].read() == b'"a","b"\r\n"5","6"\r\n"7","8"\r\n'
