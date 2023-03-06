@@ -561,7 +561,7 @@ def stream_read_xbrl_sync(
 
     def _final_date_and_rows():
        for final_date, rows in dummy_list_to_ingest:
-            if final_date < latest_completed_date:
+            if final_date <= latest_completed_date:
                 continue  # Skip since the file has no data we need
             yield (final_date, rows)
 
