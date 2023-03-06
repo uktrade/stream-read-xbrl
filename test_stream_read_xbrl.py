@@ -515,7 +515,7 @@ expected_data = ({
 def mock_companies_house_daily_zip(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
         httpx_mock.add_response(
-            url='http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip',
+            url='https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip',
             content=f.read(),
         )
 
@@ -523,14 +523,14 @@ def mock_companies_house_daily_zip(httpx_mock):
 def mock_companies_house_daily_zip_404(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
         httpx_mock.add_response(
-            url='http://download.companieshouse.gov.uk/does-not-exist.zip',
+            url='https://download.companieshouse.gov.uk/does-not-exist.zip',
             status_code=404,
         )
 
 @pytest.fixture
 def mock_companies_house_daily_html(httpx_mock):
     httpx_mock.add_response(
-        url='http://download.companieshouse.gov.uk/en_accountsdata.html',
+        url='https://download.companieshouse.gov.uk/en_accountsdata.html',
         content=b'''
             <a href="Accounts_Bulk_Data-2023-03-02.zip">Link</a>
             <a href="does-not-exist.zip">Link</a>
@@ -540,7 +540,7 @@ def mock_companies_house_daily_html(httpx_mock):
 
 def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
     with \
-            httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
+            httpx.stream('GET', 'https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
