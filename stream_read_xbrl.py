@@ -88,6 +88,9 @@ def _get_default_pool():
 def _xbrl_to_rows(name_xbrl_xml_str):
     name, xbrl_xml_str = name_xbrl_xml_str
 
+    # Slightly hacky way to remove BOM, which is present in some older data
+    xbrl_xml_str = BytesIO(xbrl_xml_str[xbrl_xml_str.find(b'<'):])
+
     # Low level value parsers
 
     def _date(text):
@@ -400,7 +403,7 @@ def _xbrl_to_rows(name_xbrl_xml_str):
             (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
             (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
 
-    document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True))
+    document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True, recover=True))
     context_dates = {
         e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
         for e in document.xpath("//*[local-name()='context']")
@@ -515,7 +518,7 @@ def stream_read_xbrl_zip(
     with get_pool() as pool:
         yield _COLUMNS, (
             row
-            for results in pool.imap(_xbrl_to_rows, ((name.decode(), BytesIO(b''.join(chunks))) for name, _, chunks in stream_unzip(zip_bytes_iter)))
+            for results in pool.imap(_xbrl_to_rows, ((name.decode(), b''.join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)))
             for row in results
         )
 
