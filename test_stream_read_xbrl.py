@@ -1,3 +1,4 @@
+import csv
 import re
 from datetime import date
 from decimal import Decimal
@@ -519,6 +520,34 @@ def mock_companies_house_daily_zip(httpx_mock):
             content=f.read(),
         )
 
+
+@pytest.fixture
+def mock_companies_house_monthly_zip(httpx_mock):
+    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        httpx_mock.add_response(
+            url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip',
+            content=f.read(),
+        )
+
+
+@pytest.fixture
+def mock_companies_house_historic_zip_2008(httpx_mock):
+    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        httpx_mock.add_response(
+            url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip',
+            content=f.read(),
+        )
+
+
+@pytest.fixture
+def mock_companies_house_historic_zip_2009(httpx_mock):
+    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        httpx_mock.add_response(
+            url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip',
+            content=f.read(),
+        )
+
+
 @pytest.fixture
 def mock_companies_house_daily_zip_404(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
@@ -533,6 +562,27 @@ def mock_companies_house_daily_html(httpx_mock):
         url='https://download.companieshouse.gov.uk/en_accountsdata.html',
         content=b'''
             <a href="Accounts_Bulk_Data-2023-03-02.zip">Link</a>
+            <a href="does-not-exist.zip">Link</a>
+        ''',
+    )
+
+@pytest.fixture
+def mock_companies_house_monthly_html(httpx_mock):
+    httpx_mock.add_response(
+        url='https://download.companieshouse.gov.uk/en_monthlyaccountsdata.html',
+        content=b'''
+            <a href="Accounts_Monthly_Data-July2022.zip">Link</a>
+            <a href="does-not-exist.zip">Link</a>
+        ''',
+    )
+
+@pytest.fixture
+def mock_companies_house_historic_html(httpx_mock):
+    httpx_mock.add_response(
+        url='https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html',
+        content=b'''
+            <a href="Accounts_Monthly_Data-JanuaryToDecember2008.zip">Link</a>
+            <a href="Accounts_Monthly_Data-JanToDec2009.zip">Link</a>
             <a href="does-not-exist.zip">Link</a>
         ''',
     )
@@ -554,53 +604,50 @@ def test_stream_read_xbrl_daily_all(
         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
 
-def test_stream_read_xbrl_sync():
+def test_stream_read_xbrl_sync(
+    mock_companies_house_daily_zip,
+    mock_companies_house_daily_html,
+    mock_companies_house_monthly_html,
+    mock_companies_house_monthly_zip,
+    mock_companies_house_historic_html,
+    mock_companies_house_historic_zip_2008,
+    mock_companies_house_historic_zip_2009,
+):
     with stream_read_xbrl_sync() as (columns, final_date_and_rows):
-        assert columns == ('a', 'b')
         assert tuple((
-            (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
+            (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2021, 5, 2), (('1', '2'), ('3', '4'))),
-            (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
+            (date(2008, 12, 31), expected_data),
+            (date(2009, 12, 31), expected_data),
+            (date(2022, 7, 31), expected_data),
+            (date(2023, 3, 2), expected_data),
         )
 
-    with stream_read_xbrl_sync(date(2021, 5, 1)) as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, final_date_and_rows):
         assert tuple((
-            (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
+            (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2021, 5, 2), (('1', '2'), ('3', '4'))),
-            (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
+            (date(2022, 7, 31), expected_data),
+            (date(2023, 3, 2), expected_data),
         )
 
-    with stream_read_xbrl_sync(date(2021, 5, 2)) as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, final_date_and_rows):
         assert tuple((
-            (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
+            (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
+            (date(2023, 3, 2), expected_data),
         )
-
-    with stream_read_xbrl_sync(date(2021, 5, 3)) as (columns, final_date_and_rows):
-        assert tuple((
-            (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
-        )) == (
-            (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
-        )
-
-    with stream_read_xbrl_sync(date(2022, 1, 8)) as (columns, final_date_and_rows):
-        assert tuple((
-            (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
-        )) == (
-            (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
-        )
-
-    with stream_read_xbrl_sync(date(2022, 2, 8)) as (columns, final_date_and_rows):
-        assert tuple((
-            (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
-        )) == ()
-
 
 @mock_s3
-def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty():
+def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
+    mock_companies_house_daily_zip,
+    mock_companies_house_daily_html,
+    mock_companies_house_monthly_html,
+    mock_companies_house_monthly_zip,
+    mock_companies_house_historic_html,
+    mock_companies_house_historic_zip_2008,
+    mock_companies_house_historic_zip_2009,
+):
     region_name = 'eu-west-2'
     bucket_name = 'my-bucket'
     key_prefix = 'my-prefix/'  # Would usually end in a forward slash
@@ -612,12 +659,22 @@ def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty():
 
     stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
 
-    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2021-05-02.csv')['Body'].read() == b'"a","b"\r\n"1","2"\r\n"3","4"\r\n'
-    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-02-08.csv')['Body'].read() == b'"a","b"\r\n"5","6"\r\n"7","8"\r\n'
+    expected_data_str = [{
+        key: str(value) if value is not None else ''
+        for key, value in row.items()
+    } for row in expected_data]
+
+    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read().decode().splitlines()))
+    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))
 
 
 @mock_s3
-def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone():
+def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
+    mock_companies_house_daily_zip,
+    mock_companies_house_daily_html,
+    mock_companies_house_monthly_html,
+    mock_companies_house_historic_html,
+):
     region_name = 'eu-west-2'
     bucket_name = 'my-bucket'
     key_prefix = 'my-prefix/'  # Would usually end in a forward slash
@@ -627,9 +684,14 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone():
         'LocationConstraint': region_name,
     })
 
-    s3_client.put_object(Bucket=bucket_name, Key=f'{key_prefix}2021-05-02.csv', Body='should-not-be-overwritten')
+    s3_client.put_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv', Body='should-not-be-overwritten')
 
     stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
 
-    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2021-05-02.csv')['Body'].read() == b'should-not-be-overwritten'
-    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-02-08.csv')['Body'].read() == b'"a","b"\r\n"5","6"\r\n"7","8"\r\n'
+    expected_data_str = [{
+        key: str(value) if value is not None else ''
+        for key, value in row.items()
+    } for row in expected_data]
+
+    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read() == b'should-not-be-overwritten'
+    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))

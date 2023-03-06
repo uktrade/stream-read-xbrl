@@ -557,20 +557,109 @@ def stream_read_xbrl_daily_all(
 
 @contextmanager
 def stream_read_xbrl_sync(
-    latest_completed_date=datetime.date(datetime.MINYEAR, 1, 1),
+    ingest_data_after_date=datetime.date(datetime.MINYEAR, 1, 1),
+    data_urls=(
+        'https://download.companieshouse.gov.uk/en_accountsdata.html',
+        'https://download.companieshouse.gov.uk/en_monthlyaccountsdata.html',
+        'https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html',
+    ),
+    get_client = lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3)),
 ):
+    def extract_start_end_dates(url):
+        file_basename = os.path.basename(url)
+        file_name_no_ext = os.path.splitext(file_basename)[0]
+
+        if 'JanToDec' in file_name_no_ext or 'JanuaryToDecember' in file_name_no_ext:
+            file_name_no_ext = os.path.splitext(url)[0]
+            year = file_name_no_ext[-4:]
+            return datetime.date(int(year), 1, 1), datetime.date(int(year), 12, 31)
+        elif 'Accounts_Monthly_Data' in file_name_no_ext:
+            # Extract the year and month from the string
+            year = int(file_name_no_ext[-4:])
+            month_name = file_name_no_ext.split('-')[1][:-4]
+            # Convert the month name to a month number
+            month_num = datetime.datetime.strptime(month_name, '%B').month
+            # Calculate the last date of the month
+            first_day_of_month = datetime.date(year, month_num, 1)
+            next_month = datetime.date(year, month_num, 28) + datetime.timedelta(days=4)
+            last_day_of_month = next_month - datetime.timedelta(days=next_month.day)
+            return (first_day_of_month, last_day_of_month)
+        elif 'Accounts_Bulk_Data' in file_name_no_ext:
+            date_str = file_name_no_ext.split('-', 1)[1]
+            day = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            return (day, day)
+        else:
+            return (None, None)
+
+    def get_content(client, url):
+        r = httpx.get(url)
+        r.raise_for_status()
+        return r.content
+
     dummy_list_to_ingest = [
         (datetime.date(2021, 5, 2), (('1', '2'), ('3', '4'))),
         (datetime.date(2022, 2, 8), (('5', '6'), ('7', '8'))),
     ]
 
-    def _final_date_and_rows():
-       for final_date, rows in dummy_list_to_ingest:
-            if final_date <= latest_completed_date:
-                continue  # Skip since the file has no data we need
-            yield (final_date, rows)
+    with get_client() as client:
+        pages_of_links = [
+            (data_url, BeautifulSoup(get_content(client, data_url), 'html.parser').find_all('a'))
+            for data_url in data_urls
+        ]
 
-    yield (('a', 'b'), _final_date_and_rows())
+        all_zip_urls = [
+            link.attrs['href'].strip() if link.attrs['href'].strip().startswith('http://') or link.attrs['href'].strip().startswith('https://') else
+            urllib.parse.urljoin(data_url, link.attrs['href'].strip())
+            for (data_url, page_of_links) in pages_of_links
+            for link in page_of_links
+            if link.attrs.get('href', '').endswith('.zip')
+        ]
+
+        all_zip_urls_with_dates = [
+            (zip_url, extract_start_end_dates(zip_url))
+            for zip_url in all_zip_urls
+        ]
+
+        all_zip_urls_with_parseable_dates = [
+            (zip_url, dates)
+            for (zip_url, dates) in all_zip_urls_with_dates
+            if dates != (None, None)
+        ]
+
+        all_zip_urls_with_dates_oldest_first = sorted(
+            all_zip_urls_with_parseable_dates, key=lambda zip_start_end: (zip_start_end[1][0], zip_start_end[1][1])
+        )
+
+        # Only include files whose ranges are only completely included in one file - itself
+        # - This is required since daily files are often also included in monthly files
+        # - This also removes duplicates, just in case
+        # - This is N^2, but hopefully not big enough list to worry about its performance
+        def num_overlaps(start, end):
+            num_overlaps  = 0
+            for _, (start_to_compare, end_to_compare) in all_zip_urls_with_dates_oldest_first: 
+                if start_to_compare <= start and end <= end_to_compare:
+                    num_overlaps += 1
+            return num_overlaps
+        all_zip_urls_with_dates_without_overlaps = [
+            (zip_url, (start, end))
+            for (zip_url, (start, end)) in all_zip_urls_with_dates_oldest_first
+            if num_overlaps(start, end) == 1
+        ]
+
+        zip_urls_with_date_in_range_to_ingest = [
+            (zip_url, (start_date, end_date))
+            for (zip_url, (start_date, end_date)) in all_zip_urls_with_dates_without_overlaps
+            if (start_date, end_date) != (None, None) and end_date > ingest_data_after_date
+        ]
+
+        def _final_date_and_rows():
+            for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
+                with client.stream('GET', zip_url) as r:
+                    r.raise_for_status()
+                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (_, rows):
+                        yield end_date, rows
+
+        yield (_COLUMNS, _final_date_and_rows())
 
 
 def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
