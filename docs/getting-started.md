@@ -66,3 +66,24 @@ print(df)
 ```
 
 Note that this will load the data of the file into memory at once, and so is not really streaming.
+
+
+### Regularly syncing data to a local store
+
+A utility function is supplied that fetches the data from Companies House, `stream_read_xbrl_sync`. It takes a single optional `date` argument, and returns data after this date.
+
+```python
+import datetime
+from stream_read_xbrl import stream_read_xbrl_sync
+
+with stream_read_xbrl_sync(datetime.date(2022, 12, 31)) as (columns, final_zip_date):
+    for (final_zip_date, rows) in final_date_and_rows
+       for row in rows:
+           print(row)
+```
+
+The `final_zip_date` can be passed to the next call of `stream_read_xbrl_sync` in order skip data before this date. This can be used as part of a regular sync process from Companies House to a local store - hence the name of the function.
+
+This function can take many hours, even days. To handle the case of the process being interrupted, once the inner `rows` iterable has iterated to completion, the `final_zip_date` can be saved, and used in the next call to `stream_read_xbrl_sync` to pick up close to where it left off.
+
+It is possible that in such a process data will be repeated, especially if `stream_read_xbrl_sync` is called infrequently.
