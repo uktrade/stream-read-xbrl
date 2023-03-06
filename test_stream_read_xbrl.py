@@ -562,20 +562,20 @@ def mock_zip_urls():
     with patch("stream_read_xbrl.stream_read_xbrl_sync.zip_urls", mocked_data):
         yield
 
-# def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
-#     with \
-#             httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
-#             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-#         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
+def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
+    with \
+            httpx.stream('GET', 'http://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
+            stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
+        assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
 
-# def test_stream_read_xbrl_daily_all(
-#     mock_companies_house_daily_html,
-#     mock_companies_house_daily_zip,
-#     mock_companies_house_daily_zip_404,
-# ):
-#     with stream_read_xbrl_daily_all() as (columns, rows):
-#         assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
+def test_stream_read_xbrl_daily_all(
+    mock_companies_house_daily_html,
+    mock_companies_house_daily_zip,
+    mock_companies_house_daily_zip_404,
+):
+    with stream_read_xbrl_daily_all() as (columns, rows):
+        assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
 
 def test_stream_read_xbrl_sync():
     expected_result = [
