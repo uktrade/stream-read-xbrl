@@ -1,4 +1,6 @@
+import csv
 import datetime
+import logging
 import multiprocessing
 import multiprocessing.pool
 import os
@@ -9,7 +11,8 @@ from collections import defaultdict
 from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
-from io import BytesIO
+from io import BytesIO, IOBase
+from pathlib import PurePosixPath
 from typing import Optional, Callable
 
 import dateutil
@@ -59,6 +62,8 @@ _COLUMNS = (
     'tax_on_profit_or_loss_on_ordinary_activities',
     'profit_loss_for_period',
 )
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -566,3 +571,64 @@ def stream_read_xbrl_sync(
             yield (final_date, rows)
 
     yield (('a', 'b'), _final_date_and_rows())
+
+
+def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
+
+    def _to_file_like_obj(iterable):
+        chunk = b''
+        offset = 0
+        it = iter(iterable)
+
+        def up_to_iter(size):
+            nonlocal chunk, offset
+
+            while size:
+                if offset == len(chunk):
+                    try:
+                        chunk = next(it)
+                    except StopIteration:
+                        break
+                    else:
+                        offset = 0
+                to_yield = min(size, len(chunk) - offset)
+                offset = offset + to_yield
+                size -= to_yield
+                yield chunk[offset - to_yield : offset]
+
+        class FileLikeObj(IOBase):
+            def readable(self):
+                return True
+
+            def read(self, size=-1):
+                return b''.join(
+                    up_to_iter(float('inf') if size is None or size < 0 else size)
+                )
+
+        return FileLikeObj()
+
+    def _convert_to_csv(columns, rows):
+        class PseudoBuffer:
+            def write(self, value):
+                return value.encode("utf-8")
+
+        pseudo_buffer = PseudoBuffer()
+        csv_writer = csv.writer(pseudo_buffer, quoting=csv.QUOTE_NONNUMERIC)
+        yield csv_writer.writerow(columns)
+        yield from (csv_writer.writerow(row) for row in rows)
+
+    s3_paginator = s3_client.get_paginator('list_objects_v2')
+    dates = (
+        datetime.date.fromisoformat(PurePosixPath(content['Key']).stem)
+        for page in s3_paginator.paginate(Bucket=bucket_name, Prefix=key_prefix)
+        for content in page.get('Contents', ())
+    )
+    latest_completed_date = max(dates, default=datetime.date(datetime.MINYEAR, 1, 1))
+
+    with stream_read_xbrl_sync(latest_completed_date) as (columns, final_date_and_rows):
+        for (final_date, rows) in final_date_and_rows:
+            key = f'{key_prefix}{final_date}.csv'
+            logger.info('Saving Companies House accounts data to %s/%s ...', bucket_name, key)
+            csv_file = _to_file_like_obj(_convert_to_csv(columns, rows))
+            s3_client.upload_fileobj(Bucket=bucket_name, Key=key, Fileobj=csv_file)
+            logger.info('Saving Companies House accounts data to %s/%s (done)', bucket_name, key)
