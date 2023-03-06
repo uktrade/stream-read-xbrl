@@ -565,4 +565,4 @@ def stream_read_xbrl_sync(
                 continue  # Skip since the file has no data we need
             yield (final_date, rows)
 
-    yield (('a, b'), _final_date_and_rows())
+    yield (('a', 'b'), _final_date_and_rows())

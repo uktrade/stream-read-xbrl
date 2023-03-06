@@ -553,7 +553,7 @@ def test_stream_read_xbrl_daily_all(
 
 def test_stream_read_xbrl_sync():
     with stream_read_xbrl_sync() as (columns, final_date_and_rows):
-        assert columns == ('a, b')
+        assert columns == ('a', 'b')
         assert tuple((
             (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
         )) == (
