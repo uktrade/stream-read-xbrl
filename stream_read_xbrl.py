@@ -548,3 +548,56 @@ def stream_read_xbrl_daily_all(
                         yield from rows
 
         yield _COLUMNS, rows()
+
+@contextmanager
+def stream_read_xbrl_sync(ingest_data_after_date):
+    list_to_ingest = []
+
+    zip_urls = [
+        "Accounts_Monthly_Data-JanToDec2008.zip",
+        "Accounts_Monthly_Data-January2022.zip",
+        "Accounts_Monthly_Data-February2022.zip",
+        "Accounts_Monthly_Data-March2022.zip",
+        "Accounts_Monthly_Data-April2022.zip",
+        "Accounts_Monthly_Data-May2022.zip",
+        "Accounts_Monthly_Data-June2022.zip",
+        "Accounts_Monthly_Data-July2022.zip",
+        "Accounts_Bulk_Data-2023-03-02.zip",
+        "Accounts_Bulk_Data-2023-03-01.zip",
+        "Accounts_Bulk_Data-2023-02-28.zip",
+        "Accounts_Bulk_Data-2023-02-25.zip",
+        "Accounts_Bulk_Data-2023-02-24.zip",
+        "Accounts_Bulk_Data-2023-02-23.zip",
+        "Accounts_Bulk_Data-2023-02-22.zip",
+        "Accounts_Bulk_Data-2023-02-21.zip",
+    ]
+
+    for file_name in zip_urls:
+        file_name_no_ext = os.path.splitext(file_name)[0]
+
+        if "JanToDec" in file_name:
+            file_name_no_ext = os.path.splitext(file_name)[0]
+            year = file_name_no_ext[-4]
+            latest_file_date = datetime.date(int(year), 12, 31)
+            if latest_file_date > ingest_data_after_date:
+                list_to_ingest.append(file_name)
+        elif "Accounts_Monthly_Data" in file_name:
+            # Extract the year and month from the string
+            year = int(file_name_no_ext[-4:])
+            month_name = file_name_no_ext.split("-")[1][:-4]
+            # Convert the month name to a month number
+            month_num = datetime.datetime.strptime(month_name, "%B").month
+            # Calculate the last date of the month
+            last_day_of_month = datetime.date(year, month_num, 1) + datetime.timedelta(days=31)
+            last_day_of_month = last_day_of_month.replace(day=1) - datetime.timedelta(days=1)
+            # Format the date in yyyy-mm-dd format
+            latest_file_date = datetime.datetime.strptime(last_day_of_month.strftime('%Y-%m-%d'), "%Y-%m-%d").date()
+            if latest_file_date > ingest_data_after_date:
+                list_to_ingest.append(file_name)
+        elif "Accounts_Bulk_Data" in file_name:
+            date_str = file_name_no_ext.split('-', 1)[1]
+            latest_file_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+            if latest_file_date > ingest_data_after_date:
+                list_to_ingest.append(file_name)
+
+    return list_to_ingest
