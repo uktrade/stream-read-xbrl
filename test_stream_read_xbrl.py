@@ -573,7 +573,6 @@ def test_stream_read_xbrl_sync():
         assert tuple((
             (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2021, 5, 2), (('1', '2'), ('3', '4'))),
             (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
         )
 
@@ -584,14 +583,14 @@ def test_stream_read_xbrl_sync():
             (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
         )
 
-    with stream_read_xbrl_sync(date(2022, 2, 8)) as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync(date(2022, 1, 8)) as (columns, final_date_and_rows):
         assert tuple((
             (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
         )) == (
             (date(2022, 2, 8), (('5', '6'), ('7', '8'))),
         )
 
-    with stream_read_xbrl_sync(date(2022, 2, 9)) as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync(date(2022, 2, 8)) as (columns, final_date_and_rows):
         assert tuple((
             (final_date, tuple(rows)) for (final_date, rows) in final_date_and_rows
         )) == ()
