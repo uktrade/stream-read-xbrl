@@ -580,7 +580,7 @@ def stream_read_xbrl_sync(ingest_data_after_date):
             year = file_name_no_ext[-4]
             latest_file_date = datetime.date(int(year), 12, 31)
             if latest_file_date > ingest_data_after_date:
-                list_to_ingest.append(file_name)
+                list_to_ingest.append((latest_file_date, file_name))
         elif "Accounts_Monthly_Data" in file_name:
             # Extract the year and month from the string
             year = int(file_name_no_ext[-4:])
@@ -593,11 +593,18 @@ def stream_read_xbrl_sync(ingest_data_after_date):
             # Format the date in yyyy-mm-dd format
             latest_file_date = datetime.datetime.strptime(last_day_of_month.strftime('%Y-%m-%d'), "%Y-%m-%d").date()
             if latest_file_date > ingest_data_after_date:
-                list_to_ingest.append(file_name)
+                list_to_ingest.append((latest_file_date, file_name))
         elif "Accounts_Bulk_Data" in file_name:
             date_str = file_name_no_ext.split('-', 1)[1]
             latest_file_date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
             if latest_file_date > ingest_data_after_date:
-                list_to_ingest.append(file_name)
+                list_to_ingest.append((latest_file_date, file_name))
 
-    yield list_to_ingest
+    def _final_date_and_rows():
+       for latest_file_date, url in list_to_ingest:
+            with \
+                    httpx.stream('GET', urllib.parse.urljoin('https://download.companieshouse.gov.uk/', url)) as r, \
+                    stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (_, rows):
+                yield (latest_file_date, rows)
+
+    yield (_COLUMNS, _final_date_and_rows())
