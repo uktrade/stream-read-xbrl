@@ -85,11 +85,11 @@ def _get_default_pool():
             p._config['daemon'] = daemon_status_value
 
 
-def _xbrl_to_rows(name_xbrl_xml_str):
-    name, xbrl_xml_str = name_xbrl_xml_str
+def _xbrl_to_rows(name_xbrl_xml_str_orig):
+    name, xbrl_xml_str_orig = name_xbrl_xml_str_orig
 
     # Slightly hacky way to remove BOM, which is present in some older data
-    xbrl_xml_str = BytesIO(xbrl_xml_str[xbrl_xml_str.find(b'<'):])
+    xbrl_xml_str = BytesIO(xbrl_xml_str_orig[xbrl_xml_str_orig.find(b'<'):])
 
     # Low level value parsers
 
@@ -403,7 +403,18 @@ def _xbrl_to_rows(name_xbrl_xml_str):
             (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
             (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
 
-    document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True, recover=True))
+    try:
+        document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True, recover=True))
+        root = document.getroot()
+        document.xpath("//*[0]")
+    except:
+        # In at least one case - Prod224_9956_04944372_20100331.xml, the XML seems very badly formed.
+        # Suspect this is before Companies House had better validation. The best we can do is log and
+        # carry on. We can at least still get a row in the data
+        logger.warning("Bad XML. Name: %s XML: %s", name, xbrl_xml_str_orig)
+        document = etree.parse(BytesIO(b'<?xml version="1.0" encoding="UTF-8"?><root></root>'), etree.XMLParser(ns_clean=True, recover=True))
+        root = document.getroot()
+
     context_dates = {
         e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
         for e in document.xpath("//*[local-name()='context']")
@@ -423,7 +434,7 @@ def _xbrl_to_rows(name_xbrl_xml_str):
         company_id,
         _date(date),
         filetype,
-        ';'.join(set(allowed_taxonomies) & set(document.getroot().nsmap.values())),
+        ';'.join(set(allowed_taxonomies) & set(root.nsmap.values())),
     )
 
     # Mutable dictionaries to store the "priority" (lower is better) of a found value
