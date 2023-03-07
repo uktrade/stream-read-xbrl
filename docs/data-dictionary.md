@@ -1,15 +1,19 @@
 # Data dictionary
 
-stream-read-xbrl converts Companies House accounts data into a single data frame of 37 columns. The 37 columns can be interpreted as a denormalised data frame of 3 source data frames - "Runs", "Companies at date in run", and "Periods for company at date in run".
+stream-read-xbrl converts Companies House accounts data into a single data frame of 38 columns. The 38 columns can be interpreted as a denormalised data frame of 3 source data frames - "Run", "Companies at date in run", and "Periods for company at date in run".
 
 
-## Runs
-
-There should be one or more runs in all data extracted by stream-read-xbrl.
+## Run
 
 **run_code**
 
 :   str
+
+**zip_url**
+
+:   str
+
+:   Original URL of zip. Populated by stream_read_xbrl_sync and stream_read_xbrl_sync_s3_csv, None otherwise.
 
 
 ## Companies at date in run

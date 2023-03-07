@@ -61,6 +61,7 @@ _COLUMNS = (
     'profit_loss_on_ordinary_activities_before_tax',
     'tax_on_profit_or_loss_on_ordinary_activities',
     'profit_loss_for_period',
+    'zip_url'
 )
 
 logger = logging.getLogger(__name__)
@@ -525,48 +526,14 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
 def stream_read_xbrl_zip(
     zip_bytes_iter,
     get_pool=_get_default_pool,
+    zip_url=None,
 ):
     with get_pool() as pool:
         yield _COLUMNS, (
-            row
+            row + (zip_url,)
             for results in pool.imap(_xbrl_to_rows, ((name.decode(), b''.join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)))
             for row in results
         )
-
-
-@contextmanager
-def stream_read_xbrl_daily_all(
-    url='https://download.companieshouse.gov.uk/en_accountsdata.html',
-    get_client=lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3)),
-    get_pool=_get_default_pool,
-    allow_404=True,
-):
-    with get_client() as client:
-        all_links = BeautifulSoup(httpx.get(url).content, "html.parser").find_all('a')
-        zip_urls = [
-            link.attrs['href'] if link.attrs['href'].strip().startswith('http://') or link.attrs['href'].strip().startswith('https://') else
-            urllib.parse.urljoin(url, link.attrs['href'])
-            for link in all_links
-            if link.attrs.get('href', '').endswith('.zip')
-        ]
-
-        def rows():
-            for zip_url in zip_urls:
-                with client.stream('GET', zip_url) as r:
-                    try:
-                        r.raise_for_status()
-                    except httpx.HTTPStatusError:
-                        if r.status_code != 404 or not allow_404:
-                            raise
-                        else:
-                            for _ in r.iter_bytes(chunk_size=65536):
-                                pass
-                            continue
-
-                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), get_pool=get_pool) as (_, rows):
-                        yield from rows
-
-        yield _COLUMNS, rows()
 
 
 @contextmanager
@@ -670,7 +637,7 @@ def stream_read_xbrl_sync(
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
                 with client.stream('GET', zip_url) as r:
                     r.raise_for_status()
-                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (_, rows):
+                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), zip_url=zip_url) as (_, rows):
                         yield end_date, rows
 
         yield (_COLUMNS, _final_date_and_rows())
