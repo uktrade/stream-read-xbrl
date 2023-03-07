@@ -53,6 +53,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal('0.02'),  # Strange, but the source seems to say this
@@ -91,6 +92,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(1),
@@ -129,6 +131,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1023),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(3),
@@ -167,6 +170,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(100),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(1),
@@ -205,6 +209,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(3887),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(2),
@@ -243,6 +248,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(8382),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(2),
@@ -281,6 +287,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(0),
@@ -319,6 +326,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(2),
@@ -357,6 +365,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(388507),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(2),
@@ -395,6 +404,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(4),
@@ -433,6 +443,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1236),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(4),
@@ -471,6 +482,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal(0),
@@ -509,6 +521,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1),
     'turnover_gross_operating_revenue': None,
+    'zip_url': None,
 })
 
 

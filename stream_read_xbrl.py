@@ -61,6 +61,7 @@ _COLUMNS = (
     'profit_loss_on_ordinary_activities_before_tax',
     'tax_on_profit_or_loss_on_ordinary_activities',
     'profit_loss_for_period',
+    'zip_url'
 )
 
 logger = logging.getLogger(__name__)
@@ -525,10 +526,11 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
 def stream_read_xbrl_zip(
     zip_bytes_iter,
     get_pool=_get_default_pool,
+    zip_url=None,
 ):
     with get_pool() as pool:
         yield _COLUMNS, (
-            row
+            row + (zip_url,)
             for results in pool.imap(_xbrl_to_rows, ((name.decode(), b''.join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)))
             for row in results
         )
