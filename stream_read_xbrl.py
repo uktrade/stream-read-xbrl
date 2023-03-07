@@ -475,7 +475,7 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
     def handle_periodic(element, local_name, attribute_value, context_ref, name, priority, test, parse):
         if not context_ref:
             return
-        dates = context_dates[context_ref]
+        dates = context_dates.get(context_ref)
         if not dates:
             return
 
