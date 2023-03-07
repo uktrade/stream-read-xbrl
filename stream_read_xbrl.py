@@ -637,7 +637,7 @@ def stream_read_xbrl_sync(
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
                 with client.stream('GET', zip_url) as r:
                     r.raise_for_status()
-                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (_, rows):
+                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), zip_url=zip_url) as (_, rows):
                         yield end_date, rows
 
         yield (_COLUMNS, _final_date_and_rows())

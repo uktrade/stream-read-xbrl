@@ -523,6 +523,12 @@ expected_data = ({
     'zip_url': None,
 })
 
+def get_expected_data(zip_url):
+    return tuple(
+        {**row, 'zip_url': zip_url}
+        for row in expected_data
+    )
+
 
 @pytest.fixture
 def mock_companies_house_daily_zip(httpx_mock):
@@ -604,7 +610,7 @@ def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
     with \
             httpx.stream('GET', 'https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        assert tuple((dict(zip(columns, row)) for row in rows)) == expected_data
+        assert tuple((dict(zip(columns, row)) for row in rows)) == get_expected_data(None)
 
 
 def test_stream_read_xbrl_sync(
@@ -620,25 +626,25 @@ def test_stream_read_xbrl_sync(
         assert tuple((
             (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2008, 12, 31), expected_data),
-            (date(2009, 12, 31), expected_data),
-            (date(2022, 7, 31), expected_data),
-            (date(2023, 3, 2), expected_data),
+            (date(2008, 12, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip')),
+            (date(2009, 12, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip')),
+            (date(2022, 7, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')),
+            (date(2023, 3, 2), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
     with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, final_date_and_rows):
         assert tuple((
             (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2022, 7, 31), expected_data),
-            (date(2023, 3, 2), expected_data),
+            (date(2022, 7, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')),
+            (date(2023, 3, 2), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
     with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, final_date_and_rows):
         assert tuple((
             (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
         )) == (
-            (date(2023, 3, 2), expected_data),
+            (date(2023, 3, 2), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
 @mock_s3
@@ -665,9 +671,15 @@ def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
     expected_data_str = [{
         key: str(value) if value is not None else ''
         for key, value in row.items()
-    } for row in expected_data]
+    } for row in get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')]
 
     assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read().decode().splitlines()))
+
+    expected_data_str = [{
+        key: str(value) if value is not None else ''
+        for key, value in row.items()
+    } for row in get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')]
+
     assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))
 
 
@@ -694,7 +706,7 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
     expected_data_str = [{
         key: str(value) if value is not None else ''
         for key, value in row.items()
-    } for row in expected_data]
+    } for row in get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')]
 
     assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read() == b'should-not-be-overwritten'
     assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))
