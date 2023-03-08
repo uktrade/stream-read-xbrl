@@ -420,8 +420,9 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
         root = document.getroot()
 
     context_dates = {
-        e.get('id'): _get_dates(e.xpath("./*[local-name()='period']")[0])
+        e.get('id'): _get_dates(period)
         for e in document.xpath("//*[local-name()='context']")
+        for period in e.xpath("./*[local-name()='period']")[:1]
     }
 
     fn = os.path.basename(name)
