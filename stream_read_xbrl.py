@@ -107,7 +107,10 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
 
     def _parse_decimal(element, text):
         sign = -1 if element.get('sign', '') == '-' else +1
-        return sign * Decimal(re.sub(r',', '', text)) * Decimal(10) ** Decimal(element.get('scale', '0'))
+        text_without_thousands_separator = \
+            text.replace(' ', '') if element.get('format', '').rpartition(':')[2] == 'numspacedot' else \
+            text.replace(',', '')
+        return sign * Decimal(text_without_thousands_separator) * Decimal(10) ** Decimal(element.get('scale', '0'))
 
     def _parse_decimal_with_colon(element, text):
         return _parse(element, re.sub(r'.*: ', '', text), _parse_decimal)
