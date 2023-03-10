@@ -11,7 +11,7 @@ To use it, pass it 4 values from the single row of data in question:
 
 The function then:
 
-- If necessary, downloads the source ZIP file if necessary from Companies House, and stores in a local cache.
+- If necessary, downloads the source ZIP file from Companies House, and stores in a local cache.
 - Finds the maching file of original member XML or HTML file that mathes the 4 values.
 - Prints out this original data from which this data was derived.
 
