@@ -35,9 +35,11 @@ The remaining columns are all extracted from the HTML or XML inside each member 
 
 How data is found for each column is a complex process. However in general, data for each column is found by either by tag name, or by name attribute value.
 
+What this means is described below using an example column, `balance_sheet_date`.
+
 ### Tag name
 
-The column `balance_sheet_name` can be extracted from the `BalanceSheetDate` name attribute. What this means in terms of the source data can be seen in the following example.
+The column `balance_sheet_date` can be extracted from the `BalanceSheetDate` name attribute. What this means in terms of the source data can be seen in the following example.
 
 ```xml
 <any-namespace:any-tag name="bus:BalanceSheetDate">
@@ -45,11 +47,11 @@ The column `balance_sheet_name` can be extracted from the `BalanceSheetDate` nam
 </any-namespace:any-tag>
 ```
 
-In this case, the `balance_sheet_name` column will have a Python date object corresponding to 31 May 2022.
+In this case, the `balance_sheet_date` column will have a Python date object corresponding to 31 May 2022.
 
 ### Name attribute value
 
-The column `balance_sheet_name` can alternatively be extracted from `BalanceSheetDate` tags. For example.
+The column `balance_sheet_date` can alternatively be extracted from `BalanceSheetDate` tags. For example.
 
 ```xml
 <bus:BalanceSheetDate>
