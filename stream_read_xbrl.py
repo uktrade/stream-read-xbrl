@@ -1,10 +1,12 @@
 import csv
 import datetime
+import hashlib
 import logging
 import multiprocessing
 import multiprocessing.pool
 import os
 import re
+import sys
 import urllib.parse
 from dataclasses import dataclass
 from collections import defaultdict
@@ -12,7 +14,7 @@ from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
 from io import BytesIO, IOBase
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Optional, Callable
 
 import dateutil
@@ -708,3 +710,59 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
             csv_file = _to_file_like_obj(_convert_to_csv(columns, rows))
             s3_client.upload_fileobj(Bucket=bucket_name, Key=key, Fileobj=csv_file)
             logger.info('Saving Companies House accounts data to %s/%s (done)', bucket_name, key)
+
+
+def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_folder=".debug-cache"):
+    Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
+
+    # Hashing so we have a filesystem-safe URL
+    hashed_zip_url = hashlib.sha256(zip_url.encode('utf-8')).hexdigest()
+    local_zip_file = Path(debug_cache_folder).joinpath(hashed_zip_url)
+
+    if not local_zip_file.exists():
+        print('The ZIP', zip_url, 'does not exist in local cache. Downloading...', file=sys.stderr)
+        done = False
+        try:
+            with \
+                    httpx.stream('GET', zip_url) as r, \
+                    open(local_zip_file, 'wb') as f:
+                r.raise_for_status()
+                for chunk in r.iter_bytes():
+                    f.write(chunk)
+            done = True
+        finally:
+            if not done:
+                local_zip_file.unlink(missing_ok=True)
+        print('Downloaded', file=sys.stderr)
+    else:
+        print('Found', zip_url, 'in local cache', file=sys.stderr)
+
+    def local_chunks():
+        with open(local_zip_file, 'rb') as f:
+            while True:
+                chunk = f.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+
+    print('Searching ZIP for member file matching', run_code, company_id, date, file=sys.stderr)
+    found = False
+    for name, _, chunks in stream_unzip(local_chunks()):
+        fn = os.path.basename(name.decode('utf-8'))
+        mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
+        _run_code, _company_id, _date, _ = mo.groups()
+        # print(_run_code, _company_id, _date)
+
+        if _run_code == run_code and _company_id == company_id and _date == date.isoformat().replace('-', ''):
+            print('Found matching file', name, file=sys.stderr)
+            found = True
+            for chunk in chunks:
+                sys.stdout.buffer.write(chunk)
+        else:
+            for chunk in chunks:
+                pass
+
+    if not Found:
+        print('No matching member file found', file=sys.stderr)
+
+    print('Finished', file=sys.stderr)
