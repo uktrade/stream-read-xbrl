@@ -112,8 +112,10 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
             text.replace(',', '')
         return sign * Decimal(text_without_thousands_separator) * Decimal(10) ** Decimal(element.get('scale', '0'))
 
-    def _parse_decimal_with_colon(element, text):
-        return _parse(element, re.sub(r'.*: ', '', text), _parse_decimal)
+    def _parse_decimal_with_colon_or_dash(element, text):
+        # Values seem to have a human readble prefix that isn't part of the value,
+        # like "2017 - 2" to mean 2 employees. So we strip the prefix.
+        return _parse(element, re.sub(r'(.*:)|(.+- )', '', text), _parse_decimal)
 
     def _parse_date(element, text):
         return _date(text)
@@ -186,10 +188,10 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
         ),
         'average_number_employees_during_period': (
             [
-                (_av('AverageNumberEmployeesDuringPeriod'), _parse_decimal_with_colon),
-                (_av('EmployeesTotal'), _parse_decimal_with_colon),
-                (_tn('AverageNumberEmployeesDuringPeriod'), _parse_decimal_with_colon),
-                (_tn('EmployeesTotal'), _parse_decimal_with_colon),
+                (_av('AverageNumberEmployeesDuringPeriod'), _parse_decimal_with_colon_or_dash),
+                (_av('EmployeesTotal'), _parse_decimal_with_colon_or_dash),
+                (_tn('AverageNumberEmployeesDuringPeriod'), _parse_decimal_with_colon_or_dash),
+                (_tn('EmployeesTotal'), _parse_decimal_with_colon_or_dash),
             ]
         ),
     }
