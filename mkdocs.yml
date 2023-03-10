@@ -26,6 +26,7 @@ nav:
     - Usage:
       - Getting started: 'getting-started.md'
       - Data dictionary: 'data-dictionary.md'
+      - How data is extracted: 'how-data-is-extracted.md'
       - Investigating data: 'investigating-data.md'
     - Contributing:
       - How to contribute: 'contributing.md'
