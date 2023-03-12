@@ -430,7 +430,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
     }
 
     fn = os.path.basename(name)
-    mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
+    # Some April 2021 data files end in .zip, but seem to really be html
+    mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml|zip)', fn)
     run_code, company_id, date, filetype = mo.groups()
     allowed_taxonomies = [
         'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
