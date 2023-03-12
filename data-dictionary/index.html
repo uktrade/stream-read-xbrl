@@ -1,0 +1,937 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../how-data-is-extracted/">
+      
+      <link rel="icon" href="../assets/dit-favicon.png">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.14">
+    
+    
+      
+        <title>Data dictionary - stream-read-xbrl</title>
+      
+    
+    
+  
+      <link rel="stylesheet" href="../assets/stylesheets/main.113286f1.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.a0c5b2b5.min.css">
+      
+      
+
+    
+  <link rel="stylesheet" href="../assets/stylesheets/extra.css">
+
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#data-dictionary" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="stream-read-xbrl" class="md-header__button md-logo" aria-label="stream-read-xbrl" data-md-component="logo">
+      
+  <img src="../assets/dit-logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            stream-read-xbrl
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Data dictionary
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/uktrade/stream-read-xbrl" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    uktrade/stream-read-xbrl
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="stream-read-xbrl" class="md-nav__button md-logo" aria-label="stream-read-xbrl" data-md-component="logo">
+      
+  <img src="../assets/dit-logo.png" alt="logo">
+
+    </a>
+    stream-read-xbrl
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/uktrade/stream-read-xbrl" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.3.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    uktrade/stream-read-xbrl
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Introduction
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          Usage
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Usage
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        Getting started
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Data dictionary
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Data dictionary
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    Run
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#companies-at-date-in-run" class="md-nav__link">
+    Companies at date in run
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#periods-for-company-in-run" class="md-nav__link">
+    Periods for company in run
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-data-is-extracted/" class="md-nav__link">
+        How data is extracted
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../investigating-data/" class="md-nav__link">
+        Investigating data
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          Contributing
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Contributing
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        How to contribute
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    Run
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#companies-at-date-in-run" class="md-nav__link">
+    Companies at date in run
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#periods-for-company-in-run" class="md-nav__link">
+    Periods for company in run
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="data-dictionary">Data dictionary</h1>
+<p>stream-read-xbrl converts Companies House accounts data into a single data frame of 38 columns. The 38 columns can be interpreted as a denormalised data frame of 3 source data frames - "Run", "Companies at date in run", and "Periods for company at date in run".</p>
+<p>For further details on the extraction of data, please see the <a href="https://stream-read-xbrl.docs.data.trade.gov.uk/how-data-is-extracted/">How Data Is Extracted</a> page</p>
+<h2 id="run">Run</h2>
+<dl>
+<dt><strong>run_code</strong></dt>
+<dd>
+<p>str</p>
+</dd>
+<dd>
+<p>Internal run processes. It is formed from the file name in Companies House, and is prefixed with 'Prod'.</p>
+</dd>
+<dt><strong>zip_url</strong></dt>
+<dd>
+<p>str</p>
+</dd>
+<dd>
+<p>Populated by stream_read_xbrl_sync and stream_read_xbrl_sync_s3_csv, None otherwise.</p>
+</dd>
+<dd>
+<p>Original URL of zip. </p>
+</dd>
+</dl>
+<h2 id="companies-at-date-in-run">Companies at date in run</h2>
+<p>For each Run, there would be one or more "Companies at date in a run".</p>
+<dl>
+<dt><strong>company_id</strong></dt>
+<dd>
+<p>str</p>
+</dd>
+<dd>
+<p>The unique identifier for the company that filed the account. Use this to join onto the company_number in the companieshouse.companies table.</p>
+</dd>
+<dd>
+<p>Extracted from the member file name in the zip.</p>
+</dd>
+<dt><strong>date</strong></dt>
+<dd>
+<p>date</p>
+</dd>
+<dd>
+<p>The date on which the account was filed, drawn from the balance sheet date. This is known as the accounting reference date.</p>
+</dd>
+<dd>
+<p>Extracted from the member file name in the zip. </p>
+</dd>
+<dt><strong>file_type</strong></dt>
+<dd>
+<p>str</p>
+</dd>
+<dd>
+<p>The file format that the account document was uploaded in. This is either XML or HTML. </p>
+</dd>
+<dd>
+<p>Extracted from the member file name in the zip. </p>
+</dd>
+<dt><strong>taxonomy</strong></dt>
+<dd>
+<p>str</p>
+</dd>
+<dd>
+<p>The account record's taxonomy, which is the specific set of hierarchical XBRL tags designed to help organize and tag documents related to the account.</p>
+</dd>
+<dt><strong>balance_sheet_date</strong></dt>
+<dd>
+<p>date</p>
+</dd>
+<dd>
+<p>The date that the company's balance sheet was submitted. This shows the value of everything the company owns, owes and is owed on the last day of the financial year.</p>
+</dd>
+<dd>
+<p>Extracted from BalanceSheetDate XBRL field</p>
+</dd>
+<dt><strong>companies_house_registered_number</strong></dt>
+<dd>
+<p>text</p>
+</dd>
+<dd>
+<p>The company's registration number, assigned to a company during the incorporation process to identify the company. This is a unique string of 8 characters.</p>
+</dd>
+<dd>
+<p>Extracted from CompaniesHouseRegisteredNumber or UKCompaniesHouseRegisteredNumber XBRL fields</p>
+</dd>
+<dt><strong>entity_current_legal_name</strong></dt>
+<dd>
+<p>str</p>
+</dd>
+<dd>
+<p>The official name of the company that filed the account, as it appears on the Companies House register.</p>
+</dd>
+<dd>
+<p>Extracted from EntityCurrentLegalOrRegisteredName or EntityCurrentLegalName XBRL fields</p>
+</dd>
+<dt><strong>company_dormant</strong></dt>
+<dd>
+<p>bool</p>
+</dd>
+<dd>
+<p>Indicates whether or not the company is dormant. The company is called dormant by Companies House if it had no 'significant' transactions in the financial year.</p>
+</dd>
+<dd>
+<p>Extracted from EntityDormantTruefalse or EntityDormant or CompanyDormant or CompanyNotDormant XBRL fields</p>
+</dd>
+<dt><strong>average_number_employees_during_period</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The average number of employees employed under a contract of service by the company that filed the account for the financial year.</p>
+</dd>
+<dd>
+<p>Extracted from AverageNumberEmployeesDuringPeriod or EmployeesTotal or AverageNumberEmployeesDuringPeriod or EmployeesTotal XBRL fields</p>
+</dd>
+</dl>
+<h2 id="periods-for-company-in-run">Periods for company in run</h2>
+<p>For each "Company at a date in a run" there can be zero or more "Periods for company in run". In the case of zero, all the following values are <code>None</code>.</p>
+<p>A period for a company, defined by <code>company_id</code>, <code>period_start</code> and <code>period_end</code>, may be repeated. This is because they are contained in multiple submissions of accounts data to Companies House.</p>
+<dl>
+<dt><strong>period_start</strong></dt>
+<dd>
+<p>date</p>
+</dd>
+<dd>
+<p>The date on which the account is made up to. This is also known as the 'accounting reference date'.</p>
+</dd>
+<dd>
+<p>Extracted from the startDate XBRL field, contained within the period and context tags of the html member file</p>
+</dd>
+<dt><strong>period_end</strong></dt>
+<dd>
+<p>date</p>
+</dd>
+<dd>
+<p>The account referencing date. This is the same as the period_start field.</p>
+</dd>
+<dd>
+<p>Extracted from the endDate XBRL field, contained within the period and context tags of the html member file</p>
+</dd>
+<dt><strong>tangible_fixed_assets</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value of assets that have been acquired for long term use in the company's business, and will be retained for a year or more.</p>
+</dd>
+<dd>
+<p>Extracted from FixedAssets or TangibleFixedAssets or PropertyPlantEquipment XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>debtors</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total amount owed to the company as a result of trading activity, measured in British sterling (£).</p>
+</dd>
+<dd>
+<p>Extracted from Debtors XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>cash_bank_in_hand</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of any positive bank account balance plus any cash held as at the balance sheet date.</p>
+</dd>
+<dd>
+<p>Extracted from CashBankInHand or CashBankOnHand XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>current_assets</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of current assets owned by the company. Current assets will convert into cash quicker than fixed assets.</p>
+</dd>
+<dd>
+<p>Extracted from CurrentAssets XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>creditors_due_within_one_year</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of goods, services or payments received by the company which are not yet paid as at the balance sheet date, but due within 1 financial year.</p>
+</dd>
+<dd>
+<p>Extracted from CreditorsDueWithinOneYear or Creditors (if withinOneYear in contextRef) XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>creditors_due_after_one_year</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of goods, services or payments received by the company which are not yet paid as at the balance sheet date, and due beyond 1 financial year.</p>
+</dd>
+<dd>
+<p>Extracted from CreditorsDueAfterOneYear XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>net_current_assets_liabilities</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The net worth (in £) of a company's current liabilities. These are amounts owing that the company expects to settle within 12 months of the balance sheet date.</p>
+</dd>
+<dd>
+<p>Extracted from NetCurrentAssetsLiabilities XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>total_assets_less_current_liabilities</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The net worth (in £) of a company's long term liabilities. These are amounts that the company expects to repay more than 12 months after the balance sheet date.</p>
+</dd>
+<dd>
+<p>Extracted from TotalAssetsLessCurrentLiabilities XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>net_assets_liabilities_including_pension_asset_liability</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of fixed and current assets less minus the total value of current and long term liabilities, including the pension asset liability.</p>
+</dd>
+<dd>
+<p>Extracted from NetAssetsLiabilitiesIncludingPensionAssetLiability or NetAssetsLiabilities XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>called_up_share_capital</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total nominal or face value (in £) of shares that the company has issued to shareholders.</p>
+</dd>
+<dd>
+<p>Extracted from CalledUpShareCapital XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>profit_loss_account_reserve</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of any other reserves not included in the profit and loss account.</p>
+</dd>
+<dd>
+<p>Extracted from ProfitLossAccountReserve XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>shareholder_funds</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of equity in the company which belongs to the company's stakeholders.</p>
+</dd>
+<dd>
+<p>Extracted from ShareholderFunds XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>turnover_gross_operating_revenue</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total income (in £) after subtracting operating expenses and other costs from total revenue.</p>
+</dd>
+<dd>
+<p>Extracted from TurnoverGrossOperatingRevenue or TurnoverRevenue XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>other_operating_income</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total income (in £) from all other operating activities which are not related to the principal activities of the company, such as gains/losses from disposals.</p>
+</dd>
+<dd>
+<p>Extracted from OtherOperatingIncome or OtherOperatingIncomeFormat2 XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>cost_sales</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of merchandise sold by the company in the stated period.</p>
+</dd>
+<dd>
+<p>Extracted from CostSales XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>gross_profit_loss</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of the accumulated profits or earnings of the company over its lifetime.</p>
+</dd>
+<dd>
+<p>Extracted from GrossProfitLoss XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>administrative_expenses</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total cost (in £) the company has incurred not directly tied to a specific function, such as rent and insurance.</p>
+</dd>
+<dd>
+<p>Extracted from AdministrativeExpenses XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>raw_materials_consumables</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total cost (in £) of all commodities that are directly attributable to the production of a good or a service.</p>
+</dd>
+<dd>
+<p>Extracted from RawMaterialsConsumables or RawMaterialsConsumablesUsed XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>staff_costs</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total staff costs (in £) of the company relating to the financial year. This includes wages, salaries, social security costs and pension costs.</p>
+</dd>
+<dd>
+<p>Extracted from StaffCosts or StaffCostsEmployeeBenefitsExpense XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>depreciation_other_amounts_written_off_tangible_intangible_fixed</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) written off by the company to account for the decrease in value of capital assets over time.</p>
+</dd>
+<dd>
+<p>Extracted from DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets or DepreciationAmortisationImpairmentExpense XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>other_operating_charges_format2</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total cost (in £) the company has incurred due to other operating income not arising from turnover or the company's principal activities.</p>
+</dd>
+<dd>
+<p>Extracted from OperatingProfitLoss or OtherOperatingExpensesFormat2 XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>operating_profit_loss</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The company's total profit (in £) from business operations before deduction of interest and taxes. This is the gross profit minus operating expenses.</p>
+</dd>
+<dd>
+<p>Extracted from OtherOperatingChargesFormat2 XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>profit_loss_on_ordinary_activities_before_tax</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The company's total profit (in £) from both operating and financial activities carried out, before the deduction of taxes.</p>
+</dd>
+<dd>
+<p>Extracted from ProfitLossOnOrdinaryActivitiesBeforeTax XBRL field for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>tax_on_profit_or_loss_on_ordinary_activities</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total tax amount applied (in £) to a company's total profit from both operating and financial activities.</p>
+</dd>
+<dd>
+<p>Extracted from TaxOnProfitOrLossOnOrdinaryActivities or TaxTaxCreditOnProfitOrLossOnOrdinaryActivities XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+<dt><strong>profit_loss_for_period</strong></dt>
+<dd>
+<p>Decimal</p>
+</dd>
+<dd>
+<p>The total value (in £) of the accumulated profits or earnings of the company for the stated accounting reference period.</p>
+</dd>
+<dd>
+<p>Extracted from ProfitLoss or ProfitLossForPeriod XBRL fields for the period indicated by period_start and period_end</p>
+</dd>
+</dl>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+  <footer class="md-footer">
+    <div class="md-footer-meta__inner md-grid">
+
+      <div class="md-copyright">
+
+        
+
+        Made with 
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+        <br><br>
+        <img src="../assets/images/ogl.png" >
+        All content is available under the 
+        <a
+            href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+            target="_blank" rel="noopener"
+        >
+            Open Government Licence v3.0</a>
+        , except where otherwise stated
+      </div>
+
+      <div class="md-copyright">
+        <a 
+          href="https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/"
+          target="_blank" rel="noopener">
+          <img src="../assets/images/govuk-crest-2x.png" width=125px height=102px;>
+          <br>
+          © Crown copyright
+        </a>
+      </div>
+
+    </div>
+  </footer>
+
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["content.code.copy", "navigation.sections"], "search": "../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.2a6f1dda.min.js"></script>
+      
+    
+  </body>
+</html>
