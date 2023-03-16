@@ -763,7 +763,7 @@ def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_fold
             for chunk in chunks:
                 pass
 
-    if not Found:
+    if not found:
         print('No matching member file found', file=sys.stderr)
 
     print('Finished', file=sys.stderr)

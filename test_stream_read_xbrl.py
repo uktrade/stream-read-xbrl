@@ -1,5 +1,6 @@
 import csv
 import re
+import tempfile
 from datetime import date
 from decimal import Decimal
 
@@ -12,6 +13,7 @@ from stream_read_xbrl import (
     stream_read_xbrl_zip,
     stream_read_xbrl_sync,
     stream_read_xbrl_sync_s3_csv,
+    stream_read_xbrl_debug,
 )
 
 expected_data = ({
@@ -710,3 +712,18 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
 
     assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read() == b'should-not-be-overwritten'
     assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))
+
+
+@mock_s3
+def test_debug(
+    mock_companies_house_historic_zip_2008,
+):
+    # Just asserts it doesn't explode
+    with tempfile.TemporaryDirectory() as directory:
+        stream_read_xbrl_debug(
+            'https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip',
+            'Prod223_3384',
+            '09355500',
+            date.fromisoformat('2022-12-31'),
+            debug_cache_folder=directory,
+        )
