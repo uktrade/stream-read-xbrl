@@ -22,7 +22,7 @@ from stream_read_xbrl import stream_read_xbrl_debug
 
 stream_read_xbrl_debug(
     zip_url='https://download.companieshouse.gov.uk/archive/Accounts_Monthly_Data-February2019.zip',
-    run_code='224_0063',
+    run_code='Prod224_0063',
     company_id='00024001',
     date=datetime.date(2018, 6, 30),
 )
