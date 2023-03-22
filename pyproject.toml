@@ -31,6 +31,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-httpx>=0.21.3",
     "pytest>=7.2.1",
+    "stream-zip>=0.0.57",
 ]
 
 [project.urls]
