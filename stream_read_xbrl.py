@@ -175,9 +175,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
         ),
         'entity_current_legal_name': (
             [
-                (_av('EntityCurrentLegalOrRegisteredName'), _parse_str),
-                (_tn('EntityCurrentLegalName'), _parse_str),
-                (_custom(None, lambda element, local_name, attribute_name, context_ref: element.xpath("./*[local-name()='span'][1]")), _parse_str),
+                (_av('EntityCurrentLegalOrRegisteredName', lambda element, local_name, attribute_name, context_ref: chain((element,), element.xpath("./*[local-name()='span'][1]"),)), _parse_str),
+                (_tn('EntityCurrentLegalName', lambda element, local_name, attribute_name, context_ref: chain((element,), element.xpath("./*[local-name()='span'][1]"),)), _parse_str),
             ]
         ),
         'company_dormant': (

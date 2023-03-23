@@ -1,13 +1,14 @@
 import csv
 import re
 import tempfile
-from datetime import date
+from datetime import datetime, date
 from decimal import Decimal
 
 import boto3
 import httpx
 import pytest
 from moto import mock_s3
+from stream_zip import ZIP_32, stream_zip
 
 from stream_read_xbrl import (
     stream_read_xbrl_zip,
@@ -727,3 +728,26 @@ def test_debug(
             date.fromisoformat('2022-12-31'),
             debug_cache_folder=directory,
         )
+
+
+def test_entity_current_legal_name_in_span():
+    html = '''
+        <html>
+        <ix:nonnumeric name="c:EntityCurrentLegalOrRegisteredName">
+            <span>The name</span>
+        </ix:nonnumeric>
+        </html>
+    '''.encode()
+
+    member_files = (
+        (
+            'Prod223_3383_00001346_20220930.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['entity_current_legal_name'] == 'The name'
