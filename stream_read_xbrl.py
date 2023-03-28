@@ -618,25 +618,9 @@ def stream_read_xbrl_sync(
             all_zip_urls_with_parseable_dates, key=lambda zip_start_end: (zip_start_end[1][0], zip_start_end[1][1])
         )
 
-        # Only include files whose ranges are only completely included in one file - itself
-        # - This is required since daily files are often also included in monthly files
-        # - This also removes duplicates, just in case
-        # - This is N^2, but hopefully not big enough list to worry about its performance
-        def num_overlaps(start, end):
-            num_overlaps  = 0
-            for _, (start_to_compare, end_to_compare) in all_zip_urls_with_dates_oldest_first: 
-                if start_to_compare <= start and end <= end_to_compare:
-                    num_overlaps += 1
-            return num_overlaps
-        all_zip_urls_with_dates_without_overlaps = [
-            (zip_url, (start, end))
-            for (zip_url, (start, end)) in all_zip_urls_with_dates_oldest_first
-            if num_overlaps(start, end) == 1
-        ]
-
         zip_urls_with_date_in_range_to_ingest = [
             (zip_url, (start_date, end_date))
-            for (zip_url, (start_date, end_date)) in all_zip_urls_with_dates_without_overlaps
+            for (zip_url, (start_date, end_date)) in all_zip_urls_with_dates_oldest_first
             if (start_date, end_date) != (None, None) and end_date > ingest_data_after_date
         ]
 
