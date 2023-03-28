@@ -564,8 +564,16 @@ def stream_read_xbrl_sync(
             year = file_name_no_ext[-4:]
             return datetime.date(int(year), 1, 1), datetime.date(int(year), 12, 31)
         elif 'Accounts_Monthly_Data' in file_name_no_ext:
+            pattern = re.compile(r"\b\d{2}\b")
+            match = pattern.search(file_name_no_ext)
+            if match:
+                year_str = match.group()
+                if len(year_str) == 2:
+                    year = int(year_str)
+                    year += 2000
+            else:
             # Extract the year and month from the string
-            year = int(file_name_no_ext[-4:])
+                year = int(file_name_no_ext[-4:])
             month_name = file_name_no_ext.split('-')[1][:-4]
             # Convert the month name to a month number
             month_num = datetime.datetime.strptime(month_name, '%B').month
