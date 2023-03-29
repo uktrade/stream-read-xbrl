@@ -629,7 +629,7 @@ def stream_read_xbrl_sync(
                 with client.stream('GET', zip_url) as r:
                     r.raise_for_status()
                     with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), zip_url=zip_url) as (_, rows):
-                        yield end_date, rows
+                        yield (start_date, end_date), rows
 
         yield (_COLUMNS, _final_date_and_rows())
 
@@ -687,7 +687,7 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
     latest_completed_date = max(dates, default=datetime.date(datetime.MINYEAR, 1, 1))
 
     with stream_read_xbrl_sync(latest_completed_date) as (columns, final_date_and_rows):
-        for (final_date, rows) in final_date_and_rows:
+        for ((start_date, final_date), rows) in final_date_and_rows:
             key = f'{key_prefix}{final_date}.csv'
             logger.info('Saving Companies House accounts data to %s/%s ...', bucket_name, key)
             csv_file = _to_file_like_obj(_convert_to_csv(columns, rows))
