@@ -676,14 +676,14 @@ def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
         for key, value in row.items()
     } for row in get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')]
 
-    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read().decode().splitlines()))
+    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-01--2022-07-31.csv')['Body'].read().decode().splitlines()))
 
     expected_data_str = [{
         key: str(value) if value is not None else ''
         for key, value in row.items()
     } for row in get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')]
 
-    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))
+    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02--2023-03-02.csv')['Body'].read().decode().splitlines()))
 
 
 @mock_s3
@@ -702,7 +702,7 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
         'LocationConstraint': region_name,
     })
 
-    s3_client.put_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv', Body='should-not-be-overwritten')
+    s3_client.put_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-01--2022-07-31.csv', Body='should-not-be-overwritten')
 
     stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
 
@@ -711,8 +711,8 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
         for key, value in row.items()
     } for row in get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')]
 
-    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-31.csv')['Body'].read() == b'should-not-be-overwritten'
-    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02.csv')['Body'].read().decode().splitlines()))
+    assert s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2022-07-01--2022-07-31.csv')['Body'].read() == b'should-not-be-overwritten'
+    assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02--2023-03-02.csv')['Body'].read().decode().splitlines()))
 
 
 @mock_s3
