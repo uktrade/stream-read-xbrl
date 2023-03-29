@@ -680,7 +680,8 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
 
     s3_paginator = s3_client.get_paginator('list_objects_v2')
     dates = (
-        datetime.date.fromisoformat(PurePosixPath(content['Key']).stem)
+        # The -10: is to support older versions where only the end date was in the file name
+        datetime.date.fromisoformat(PurePosixPath(content['Key']).stem[-10:])
         for page in s3_paginator.paginate(Bucket=bucket_name, Prefix=key_prefix)
         for content in page.get('Contents', ())
     )
@@ -688,7 +689,7 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
 
     with stream_read_xbrl_sync(latest_completed_date) as (columns, final_date_and_rows):
         for ((start_date, final_date), rows) in final_date_and_rows:
-            key = f'{key_prefix}{final_date}.csv'
+            key = f'{key_prefix}{start_date}--{final_date}.csv'
             logger.info('Saving Companies House accounts data to %s/%s ...', bucket_name, key)
             csv_file = _to_file_like_obj(_convert_to_csv(columns, rows))
             s3_client.upload_fileobj(Bucket=bucket_name, Key=key, Fileobj=csv_file)
