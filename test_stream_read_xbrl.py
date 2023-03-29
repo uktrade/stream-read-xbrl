@@ -625,29 +625,29 @@ def test_stream_read_xbrl_sync(
     mock_companies_house_historic_zip_2008,
     mock_companies_house_historic_zip_2009,
 ):
-    with stream_read_xbrl_sync() as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync() as (columns, date_range_and_rows):
         assert tuple((
-            (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
+            (date_range, tuple((dict(zip(columns, row)) for row in rows))) for (date_range, rows) in date_range_and_rows
         )) == (
-            (date(2008, 12, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip')),
-            (date(2009, 12, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip')),
-            (date(2022, 7, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')),
-            (date(2023, 3, 2), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
+            ((date(2008, 1, 1), date(2008, 12, 31)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip')),
+            ((date(2009, 1, 1), date(2009, 12, 31)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip')),
+            ((date(2022, 7, 1), date(2022, 7, 31)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')),
+            ((date(2023, 3, 2), date(2023, 3, 2)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
-    with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, date_range_and_rows):
         assert tuple((
-            (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
+            (date_range, tuple((dict(zip(columns, row)) for row in rows))) for (date_range, rows) in date_range_and_rows
         )) == (
-            (date(2022, 7, 31), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')),
-            (date(2023, 3, 2), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
+            ((date(2022, 7, 1), date(2022, 7, 31)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip')),
+            ((date(2023, 3, 2), date(2023, 3, 2)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
-    with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, final_date_and_rows):
+    with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, date_range_and_rows):
         assert tuple((
-            (final_date, tuple((dict(zip(columns, row)) for row in rows))) for (final_date, rows) in final_date_and_rows
+            (date_range, tuple((dict(zip(columns, row)) for row in rows))) for (date_range, rows) in date_range_and_rows
         )) == (
-            (date(2023, 3, 2), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
+            ((date(2023, 3, 2), date(2023, 3, 2)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
 @mock_s3
