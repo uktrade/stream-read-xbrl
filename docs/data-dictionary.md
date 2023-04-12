@@ -2,7 +2,7 @@
 
 stream-read-xbrl converts Companies House accounts data into a single data frame of 38 columns. The 38 columns can be interpreted as a denormalised data frame of 3 source data frames - "Run", "Companies at date in run", and "Periods for company at date in run".
 
-For further details on the extraction of data, please see the [How Data Is Extracted](https://stream-read-xbrl.docs.data.trade.gov.uk/how-data-is-extracted/) page
+For further details on the extraction of data, please see the [How Data Is Extracted](https://stream-read-xbrl.docs.trade.gov.uk/how-data-is-extracted/) page
 
 
 ## Run

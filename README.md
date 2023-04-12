@@ -15,4 +15,4 @@ On a standard laptop with 8 CPU cores it takes approximately 10 seconds to conve
 
 ---
 
-Visit the [stream-read-xbrl documentation](https://stream-read-xbrl.docs.data.trade.gov.uk/) for usage instructions.
+Visit the [stream-read-xbrl documentation](https://stream-read-xbrl.docs.trade.gov.uk/) for usage instructions.
