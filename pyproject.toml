@@ -35,7 +35,7 @@ dev = [
 ]
 
 [project.urls]
-"Documentation" = "https://stream-read-xbrl.docs.data.trade.gov.uk/"
+"Documentation" = "https://stream-read-xbrl.docs.trade.gov.uk/"
 "Source" = "https://github.com/uktrade/stream-read-xbrl"
 
 [tool.hatch.build]
