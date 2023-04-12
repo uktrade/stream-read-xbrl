@@ -88,7 +88,7 @@ Changes are then submitted via a Pull Request (PR). To do this:
 
 7. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.
 
-When the PR is merged, the documentation is deployed automatically to [https://stream-read-xbrl.docs.data.trade.gov.uk/](https://stream-read-xbrl.docs.data.trade.gov.uk/).
+When the PR is merged, the documentation is deployed automatically to [https://stream-read-xbrl.docs.trade.gov.uk/](https://stream-read-xbrl.docs.trade.gov.uk/).
 
 
 ## Contributing code
