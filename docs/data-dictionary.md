@@ -11,7 +11,7 @@ For further details on the extraction of data, please see the [How Data Is Extra
 
 :   str
 
-:   Internal run processes. It is formed from the file name in Companies House, and is prefixed with 'Prod'.
+:   Companies House internal run process identifier, extracted from the name of the XBRL file. This is not consistent between ingests of the same accounts data, and so should only be used for debugging.
 
 **zip_url**
 
@@ -38,7 +38,7 @@ For each Run, there would be one or more "Companies at date in a run".
 
 :   date
 
-:   The date on which the account was filed, drawn from the balance sheet date. This is known as the accounting reference date.
+:   A date drawn from the member file name, relating to the balance sheet date of one of the balance sheets included within the file.
 
 :   Extracted from the member file name in the zip. 
 
@@ -63,7 +63,7 @@ For each Run, there would be one or more "Companies at date in a run".
 
 :   date
 
-:   The date that the company's balance sheet was submitted. This shows the value of everything the company owns, owes and is owed on the last day of the financial year.
+:   The recorded date of a company's balance sheet, but not necessarily when it was submitted. Balance sheets show the value of everything the company owns, owes and is owed on the last day of the financial year.
 
 :   Extracted from BalanceSheetDate XBRL field
 
