@@ -753,7 +753,7 @@ def test_entity_current_legal_name_in_span():
         assert dict(zip(columns, row))['entity_current_legal_name'] == 'The name'
 
 def test_date_in_format():
-    html = '''
+    html_1 = '''
         <html>
             <ix:nonNumeric  
                 format="ixt2:datedaymonthyear" 
@@ -764,18 +764,47 @@ def test_date_in_format():
         </html>
     '''.encode()
 
+    html_2 = '''
+        <html>
+            <ix:nonNumeric  
+                format="ixt2:dateslasheu" 
+                name="ns11:BalanceSheetDate" 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+                10/2/23
+            </ix:nonNumeric>
+        </html>
+    '''.encode()
+
+    html_3 = '''
+        <html>
+            <ix:nonNumeric  
+                format="ixt2:datedoteu" 
+                name="ns11:BalanceSheetDate" 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+                10.2.23
+            </ix:nonNumeric>
+        </html>
+    '''.encode()
+
+    base_file =  (
+                'Prod223_3383_00001346_20220930.html',
+                datetime.now(),
+                0o600,
+                ZIP_32,
+            )
+
     member_files = (
-        (
-            'Prod223_3383_00001346_20220930.html',
-            datetime.now(),
-            0o600,
-            ZIP_32,
-            (html,),
-        ),
+            base_file+((html_1,),),
+            base_file+((html_2,),),
+            base_file+((html_3,),),
     )
+
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
-        assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2023-02-10')
+        assert tuple(dict(zip(columns, row))['balance_sheet_date'] for row in rows) == (
+            date.fromisoformat('2023-02-10'),
+            date.fromisoformat('2023-02-10'),
+            date.fromisoformat('2023-02-10'),
+        )
 
 
 def test_split_date():
