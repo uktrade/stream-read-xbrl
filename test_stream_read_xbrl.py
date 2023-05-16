@@ -20,7 +20,7 @@ from stream_read_xbrl import (
 expected_data = ({
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal('0.02'),  # Strange, but the source seems to say this
-    'balance_sheet_date': None,
+    'balance_sheet_date': date.fromisoformat('2022-12-31'),
     'called_up_share_capital': None,
     'cash_bank_in_hand': Decimal('214222'),
     'companies_house_registered_number': '09355500',
@@ -59,7 +59,7 @@ expected_data = ({
 }, {
     'administrative_expenses': None,
     'average_number_employees_during_period': Decimal('0.02'),  # Strange, but the source seems to say this
-    'balance_sheet_date': None,
+    'balance_sheet_date': date.fromisoformat('2022-12-31'),
     'called_up_share_capital': None,
     'cash_bank_in_hand': Decimal('118470'),
     'companies_house_registered_number': '09355500',
@@ -776,3 +776,28 @@ def test_date_in_format():
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = list(rows)[0]
         assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2023-02-10')
+
+
+def test_split_date():
+    html = '''
+        <html>
+            <ix:nonNumeric  
+                name="ns11:BalanceSheetDate" 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+                10 February 202<j>0</j>
+            </ix:nonNumeric>
+        </html>
+    '''.encode()
+
+    member_files = (
+        (
+            'Prod223_3383_00001346_20220930.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2020-02-10')
