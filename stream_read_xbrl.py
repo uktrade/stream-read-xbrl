@@ -106,6 +106,11 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
 
     def _parse_str(element, text):
         return str(text).replace('\n', ' ').replace('"', '')
+    
+    def _parse_absolute(element, text):
+        # Some cases where employee numbers have a negative sign attached,
+        # seemingly indicating negative employee numbers
+        return abs(_parse_decimal_with_colon_or_dash(element, text))
 
     def _parse_decimal(element, text):
         sign = -1 if element.get('sign', '') == '-' else +1
@@ -191,10 +196,10 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
         ),
         'average_number_employees_during_period': (
             [
-                (_av('AverageNumberEmployeesDuringPeriod'), _parse_decimal_with_colon_or_dash),
-                (_av('EmployeesTotal'), _parse_decimal_with_colon_or_dash),
-                (_tn('AverageNumberEmployeesDuringPeriod'), _parse_decimal_with_colon_or_dash),
-                (_tn('EmployeesTotal'), _parse_decimal_with_colon_or_dash),
+                (_av('AverageNumberEmployeesDuringPeriod'), _parse_absolute),
+                (_av('EmployeesTotal'), _parse_absolute),
+                (_tn('AverageNumberEmployeesDuringPeriod'), _parse_absolute),
+                (_tn('EmployeesTotal'), _parse_absolute),
             ]
         ),
     }
