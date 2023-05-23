@@ -127,6 +127,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
     def _parse_date(element, text):
         format = element.get('format','').rpartition(':')[2].lower()
         day_first = format in ('datedaymonthyear', 'dateslasheu', 'datedoteu')
+        if format == 'datedaymonthyearen':
+            text = text.replace(' ','')
         return dateutil.parser.parse(text, dayfirst=day_first).date()
 
     def _parse_bool(element, text):
