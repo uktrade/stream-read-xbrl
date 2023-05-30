@@ -733,7 +733,7 @@ def test_debug(
 def test_entity_current_legal_name_in_span():
     html = '''
         <html>
-        <ix:nonnumeric name="c:EntityCurrentLegalOrRegisteredName">
+        <ix:nonnumeric name="c:EntityCurrentLegalOrRegisteredName" xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
             <span>The name</span>
         </ix:nonnumeric>
         </html>
@@ -756,7 +756,8 @@ def test_entity_current_legal_name_in_span():
 def test_employee_numbers_not_negative():
     html = '''
         <html>
-            <ix:nonfraction 
+            <ix:nonfraction
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
                 name="core:AverageNumberEmployeesDuringPeriod" 
                 format="ixt:numdotdecimal" 
                 decimals="0"
@@ -883,3 +884,28 @@ def test_date_with_whitespace():
         row = list(rows)[0]
         assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2020-02-10')
 
+
+def test_date_with_exclude():
+    html = '''
+        <html>
+            <ix:nonNumeric
+                format="ixt:datelonguk"  
+                name="ns11:BalanceSheetDate" 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+                <ix:exclude> 31 July 2017</ix:exclude><span style="display:none">31 July 2017</span>
+            </ix:nonNumeric>
+        </html>
+    '''.encode()
+
+    member_files = (
+        (
+            'Prod223_3383_00001346_20220930.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2017-07-31')
