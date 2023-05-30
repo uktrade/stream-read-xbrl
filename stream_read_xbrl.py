@@ -484,7 +484,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
             return
 
         for element in test.search(element, local_name, attribute_value, context_ref):
-            value = _parse(element, ''.join(element.itertext()), parse)
+            filtered = ((e.text or '') for e in element.iter() if etree.QName(e).localname != "exclude")
+            value = _parse(element, ''.join(filtered), parse)
             if value is not None:
                 general_attributes_with_priorities[name] = (priority, value)
                 break
@@ -502,7 +503,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
             if priority >= best_priority:
                 return
 
-            value = _parse(element, ''.join(element.itertext()), parse)
+            filtered = ((e.text or '') for e in element.iter() if etree.QName(e).localname != "exclude")
+            value = _parse(element, ''.join(filtered), parse)
             if value is not None:
                 periodic_attributes_with_priorities[dates][name] = (priority, value)
                 break
