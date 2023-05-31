@@ -129,7 +129,11 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
         day_first = format in ('datedaymonthyear', 'dateslasheu', 'datedoteu')
         if format == 'datedaymonthyearen':
             text = text.replace(' ','')
-        return dateutil.parser.parse(text, dayfirst=day_first).date()
+        try:
+            return dateutil.parser.parse(text, dayfirst=day_first).date()
+        except dateutil.parser.ParserError:
+            # Try to parse mis-spellings that still have the first 3 characters right
+            return dateutil.parser.parse(re.sub(r'([a-zA-Z]+)', lambda m: m.group(0)[:3], text), dayfirst=day_first).date()
 
     def _parse_bool(element, text):
         return False if text == 'false' else True if text == 'true' else None
