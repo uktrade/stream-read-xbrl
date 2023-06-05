@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "stream-read-xbrl"
-version = "0.0.34"
+version = "0.0.35"
 authors = [
   { name="Department for International Trade", email="sre@digital.trade.gov.uk" },
 ]
