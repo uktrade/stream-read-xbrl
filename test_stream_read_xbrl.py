@@ -960,3 +960,28 @@ def test_date_with_suffix():
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = list(rows)[0]
         assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2017-03-31')
+
+def test_date_with_capitalised_suffix():
+    html = '''
+        <html>
+            <ix:nonNumeric
+                format="ixt2:datedaymonthyearen"  
+                name="ns11:BalanceSheetDate" 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+                31ST March 2017
+            </ix:nonNumeric>
+        </html>
+    '''.encode()
+
+    member_files = (
+        (
+            'Prod223_3383_00001346_20220930.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2017-03-31')
