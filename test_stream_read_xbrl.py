@@ -55,6 +55,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -94,6 +95,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -133,6 +135,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1023),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -172,6 +175,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(100),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -211,6 +215,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(3887),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -250,6 +255,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(8382),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -289,6 +295,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -328,6 +335,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -367,6 +375,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(388507),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -406,6 +415,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -445,6 +455,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1236),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -484,6 +495,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -523,6 +535,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 })
 
@@ -985,3 +998,28 @@ def test_date_with_capitalised_suffix():
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = list(rows)[0]
         assert dict(zip(columns, row))['balance_sheet_date'] == date.fromisoformat('2017-03-31')
+
+def test_parsing_error_captured_in_error_column():
+    html = '''
+        <html>
+            <ix:nonNumeric
+                format="ixt2:datedaymonthyearen"  
+                name="ns11:BalanceSheetDate" 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
+                31 ABCDEF 2018
+            </ix:nonNumeric>
+        </html>
+    '''.encode()
+
+    member_files = (
+        (
+            'Prod223_3383_00001346_20220930.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['error'] == "Unknown string format: 31ABC2018"

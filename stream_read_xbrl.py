@@ -63,7 +63,8 @@ _COLUMNS = (
     'profit_loss_on_ordinary_activities_before_tax',
     'tax_on_profit_or_loss_on_ordinary_activities',
     'profit_loss_for_period',
-    'zip_url'
+    'error',
+    'zip_url',
 )
 
 logger = logging.getLogger(__name__)
@@ -514,36 +515,41 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
                 periodic_attributes_with_priorities[dates][name] = (priority, value)
                 break
 
-    for element in document.xpath('//*'):
-        _, _, local_name = element.tag.rpartition('}')
-        _, _, attribute_value = element.get('name', '').rpartition(':')
-        context_ref = element.get('contextRef', '')
+    error = None
+    try:          
+        for element in document.xpath('//*'):
+            _, _, local_name = element.tag.rpartition('}')
+            _, _, attribute_value = element.get('name', '').rpartition(':')
+            context_ref = element.get('contextRef', '')
 
-        for name, priority, test, parse in chain(tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS):
-            handler = \
-                handle_general if name in general_attributes_with_priorities else \
-                handle_periodic
+            for name, priority, test, parse in chain(tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS):
+                handler = \
+                    handle_general if name in general_attributes_with_priorities else \
+                    handle_periodic
 
-            handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
+                handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
 
-    general_attributes = tuple(
-        general_attributes_with_priorities[name][1]
-        for name in GENERAL_XPATH_MAPPINGS.keys()
-    )
-
-    periods = tuple(
-        (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
-        + tuple(
-            periodic_attributes[name][1]
-            for name in PERIODICAL_XPATH_MAPPINGS.keys()
+        general_attributes = tuple(
+            general_attributes_with_priorities[name][1]
+            for name in GENERAL_XPATH_MAPPINGS.keys()
         )
-        for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
-    )
-    sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
+
+        periods = tuple(
+            (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
+            + tuple(
+                periodic_attributes[name][1]
+                for name in PERIODICAL_XPATH_MAPPINGS.keys()
+            )
+            for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
+        )
+        sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
+    except ValueError as e:
+        error = str(e)
 
     return \
-        tuple((core_attributes + general_attributes + period) for period in sorted_periods) if sorted_periods else \
-        ((core_attributes + general_attributes + (None,) * (2 + len(PERIODICAL_XPATH_MAPPINGS))),)
+        ((core_attributes + (None,) * (2 + len(GENERAL_XPATH_MAPPINGS) + len(PERIODICAL_XPATH_MAPPINGS)) + (error,)),) if error is not None else \
+        tuple((core_attributes + general_attributes + period + (None,)) for period in sorted_periods) if sorted_periods else \
+        ((core_attributes + general_attributes + (None,) * (3 + len(PERIODICAL_XPATH_MAPPINGS))),)
 
 
 @contextmanager
