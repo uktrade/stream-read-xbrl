@@ -63,7 +63,8 @@ _COLUMNS = (
     'profit_loss_on_ordinary_activities_before_tax',
     'tax_on_profit_or_loss_on_ordinary_activities',
     'profit_loss_for_period',
-    'zip_url'
+    'error',
+    'zip_url',
 )
 
 logger = logging.getLogger(__name__)
@@ -513,7 +514,7 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
             if value is not None:
                 periodic_attributes_with_priorities[dates][name] = (priority, value)
                 break
-
+                
     for element in document.xpath('//*'):
         _, _, local_name = element.tag.rpartition('}')
         _, _, attribute_value = element.get('name', '').rpartition(':')
@@ -542,8 +543,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
     sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
 
     return \
-        tuple((core_attributes + general_attributes + period) for period in sorted_periods) if sorted_periods else \
-        ((core_attributes + general_attributes + (None,) * (2 + len(PERIODICAL_XPATH_MAPPINGS))),)
+        tuple((core_attributes + general_attributes + period + (None,)) for period in sorted_periods) if sorted_periods else \
+        ((core_attributes + general_attributes + (None,) * (3 + len(PERIODICAL_XPATH_MAPPINGS))),)
 
 
 @contextmanager

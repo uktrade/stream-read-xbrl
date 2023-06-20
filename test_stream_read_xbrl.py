@@ -55,6 +55,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -94,6 +95,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -133,6 +135,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1023),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -172,6 +175,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(100),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -211,6 +215,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(3887),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -250,6 +255,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(8382),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -289,6 +295,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -328,6 +335,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -367,6 +375,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(388507),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -406,6 +415,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -445,6 +455,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1236),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -484,6 +495,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': None,
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 }, {
     'administrative_expenses': None,
@@ -523,6 +535,7 @@ expected_data = ({
     'taxonomy': '',
     'total_assets_less_current_liabilities': Decimal(1),
     'turnover_gross_operating_revenue': None,
+    'error': None,
     'zip_url': None,
 })
 
