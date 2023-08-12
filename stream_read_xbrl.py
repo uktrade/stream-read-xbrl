@@ -2,14 +2,13 @@ import csv
 import datetime
 import hashlib
 import logging
-import multiprocessing
-import multiprocessing.pool
 import os
 import re
 import sys
 import urllib.parse
 from dataclasses import dataclass
-from collections import defaultdict
+from collections import defaultdict, deque
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
 from decimal import Decimal
 from itertools import chain
@@ -68,25 +67,6 @@ _COLUMNS = (
 )
 
 logger = logging.getLogger(__name__)
-
-
-@contextmanager
-def _get_default_pool():
-    # Based on https://stackoverflow.com/a/71503165/1319998 that allows the pool to run
-    # inside a daemon, for example in Airflow
-    p = multiprocessing.process.current_process()
-    daemon_status_set = 'daemon' in p._config
-    daemon_status_value = p._config.get('daemon')
-
-    if daemon_status_set:
-        del p._config['daemon']
-
-    try:
-        with multiprocessing.pool.Pool(processes=max(os.cpu_count() - 1, 1)) as pool:
-             yield pool
-    finally:
-        if daemon_status_set:
-            p._config['daemon'] = daemon_status_value
 
 
 def _xbrl_to_rows(name_xbrl_xml_str_orig):
@@ -555,13 +535,25 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
 @contextmanager
 def stream_read_xbrl_zip(
     zip_bytes_iter,
-    get_pool=_get_default_pool,
     zip_url=None,
 ):
-    with get_pool() as pool:
+    queue = deque()
+    num_workers = max(os.cpu_count() - 1, 1)
+
+    def imap(executor, func, param_iterables):
+        for params in param_iterables:
+            if len(queue) == num_workers:
+                yield queue.popleft().result()
+
+            queue.append(executor.submit(func, params))
+
+        while queue:
+            yield queue.popleft().result()
+
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
         yield _COLUMNS, (
             row + (zip_url,)
-            for results in pool.imap(_xbrl_to_rows, ((name.decode(), b''.join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)))
+            for results in imap(executor, _xbrl_to_rows, ((name.decode(), b''.join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)))
             for row in results
         )
 
