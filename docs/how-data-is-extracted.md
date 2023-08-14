@@ -1,4 +1,9 @@
-# How data is extracted
+---
+layout: sub-navigation
+order: 3
+title: How data is extracted
+---
+
 
 Each row of the data frame returned by stream-read-xbrl has data extracted from 3 sources.
 

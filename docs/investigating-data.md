@@ -1,4 +1,9 @@
-# Investigating data issues
+---
+layout: sub-navigation
+order: 4
+title: Investigating data issues
+---
+
 
 To help identify the root cause of a data issue, a utiliy function is provided, `stream_read_xbrl_debug`.
 
