@@ -1,3 +1,9 @@
+---
+layout: sub-navigation
+order: 1
+title: Getting started
+---
+
 ## Prerequisites
 
 Python 3.7+

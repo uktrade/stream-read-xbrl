@@ -1,4 +1,9 @@
-# Data dictionary
+---
+layout: sub-navigation
+order: 2
+title: Data dictionary
+---
+
 
 stream-read-xbrl converts Companies House accounts data into a single data frame of 38 columns. The 38 columns can be interpreted as a denormalised data frame of 3 source data frames - "Run", "Companies at date in run", and "Periods for company at date in run".
 
