@@ -12,7 +12,7 @@ Python 3.7+
 
 You can install stream-read-xbrl and its dependencies from [PyPI](https://pypi.org/project/stream-read-xbrl/) using pip.
 
-```bash
+```shell
 pip install stream-read-xbrl
 ```
 
