@@ -594,7 +594,7 @@ def stream_read_xbrl_sync(
             return (None, None)
 
     def get_content(client, url):
-        r = httpx.get(url)
+        r = client.get(url)
         r.raise_for_status()
         return r.content
 
