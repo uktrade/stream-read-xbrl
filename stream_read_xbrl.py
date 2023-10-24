@@ -567,6 +567,7 @@ def stream_read_xbrl_sync(
         'https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html',
     ),
     get_client = lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3)),
+    chunk_size = 100 * 1048576  # 100 MiB
 ):
     def extract_start_end_dates(url):
         file_basename = os.path.basename(url)
@@ -597,6 +598,42 @@ def stream_read_xbrl_sync(
         r = client.get(url)
         r.raise_for_status()
         return r.content
+
+    @contextmanager
+    def get_content_streamed(client, url):
+
+        def get_chunks():
+            start = 0
+            end = chunk_size - 1
+            etag = None
+            remaining = None
+
+            while remaining is None or remaining > 0:
+                with client.stream('GET', url, headers={
+                    'range': f'bytes={start}-{end}'
+                }) as r:
+                    r.raise_for_status()
+                    if etag is None:
+                        etag = r.headers['etag']
+                    else:
+                        if etag != r.headers['etag']:
+                            raise Exception('etag has changed since beginning requests')     
+                    if remaining is None:
+                        remaining = int(r.headers['content-range'].split('/')[1])
+                    content_length =int(r.headers['content-length'])
+                    assert content_length > 0
+                    remaining -= content_length
+                    yield from r.iter_bytes(chunk_size=65536)
+                start += chunk_size
+                end += chunk_size
+
+        chunks = get_chunks()
+        try:
+            yield chunks
+        finally:
+            # This is for the case of unfinished iteration. It raises a GeneratorExit in get_chunks, so any
+            # open context in "get_chunks" gets properly closed, i.e. to close its open HTTP connection
+            chunks.close()
 
     dummy_list_to_ingest = [
         (datetime.date(2021, 5, 2), (('1', '2'), ('3', '4'))),
@@ -640,9 +677,8 @@ def stream_read_xbrl_sync(
 
         def _final_date_and_rows():
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
-                with client.stream('GET', zip_url) as r:
-                    r.raise_for_status()
-                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), zip_url=zip_url) as (_, rows):
+                with get_content_streamed(client, zip_url) as chunks:
+                    with stream_read_xbrl_zip(chunks, zip_url=zip_url) as (_, rows):
                         yield (start_date, end_date), rows
 
         yield (_COLUMNS, _final_date_and_rows())

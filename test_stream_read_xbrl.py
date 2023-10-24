@@ -549,36 +549,60 @@ def get_expected_data(zip_url):
 @pytest.fixture
 def mock_companies_house_daily_zip(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip',
-            content=f.read(),
+            content=content,
+            headers={
+                'etag': '"the-tag"',
+                'content-range': f'0-{len(content)-1}/{len(content)}',
+                'content-length': str(len(content)),
+            },
         )
 
 
 @pytest.fixture
 def mock_companies_house_monthly_zip(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip',
-            content=f.read(),
+            content=content,
+            headers={
+                'etag': '"the-tag"',
+                'content-range': f'0-{len(content)-1}/{len(content)}',
+                'content-length': str(len(content)),
+            },
         )
 
 
 @pytest.fixture
 def mock_companies_house_historic_zip_2008(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip',
-            content=f.read(),
+            content=content,
+            headers={
+                'etag': '"the-tag"',
+                'content-range': f'0-{len(content)-1}/{len(content)}',
+                'content-length': str(len(content)),
+            },
         )
 
 
 @pytest.fixture
 def mock_companies_house_historic_zip_2009(httpx_mock):
     with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+        content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip',
-            content=f.read(),
+            content=content,
+            headers={
+                'etag': '"the-tag"',
+                'content-range': f'0-{len(content)-1}/{len(content)}',
+                'content-length': str(len(content)),
+            },
         )
 
 
