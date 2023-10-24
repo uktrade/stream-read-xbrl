@@ -598,6 +598,12 @@ def stream_read_xbrl_sync(
         r.raise_for_status()
         return r.content
 
+    @contextmanager
+    def get_content_streamed(client, url):
+        with client.stream('GET', url) as r:
+            r.raise_for_status()
+            yield r.iter_bytes(chunk_size=65536)
+
     dummy_list_to_ingest = [
         (datetime.date(2021, 5, 2), (('1', '2'), ('3', '4'))),
         (datetime.date(2022, 2, 8), (('5', '6'), ('7', '8'))),
@@ -640,9 +646,8 @@ def stream_read_xbrl_sync(
 
         def _final_date_and_rows():
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
-                with client.stream('GET', zip_url) as r:
-                    r.raise_for_status()
-                    with stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536), zip_url=zip_url) as (_, rows):
+                with get_content_streamed(client, zip_url) as chunks:
+                    with stream_read_xbrl_zip(chunks, zip_url=zip_url) as (_, rows):
                         yield (start_date, end_date), rows
 
         yield (_COLUMNS, _final_date_and_rows())
