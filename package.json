@@ -1,6 +1,13 @@
 {
+  "scripts": {
+    "preinstall": "npx npm-force-resolutions"
+  },
   "dependencies": {
     "@11ty/eleventy": "^2.0.1",
-    "@x-govuk/govuk-eleventy-plugin": "^5.0.3"
+    "@x-govuk/govuk-eleventy-plugin": "^5.0.6"
+  },
+  "resolutions": {
+    "axios": "1.6.0",
+    "semver": "7.5.2"
   }
 }
