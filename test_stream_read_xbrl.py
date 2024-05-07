@@ -7,7 +7,7 @@ from decimal import Decimal
 import boto3
 import httpx
 import pytest
-from moto import mock_s3
+from moto import mock_aws
 from stream_zip import ZIP_32, stream_zip
 
 from stream_read_xbrl import (
@@ -687,7 +687,7 @@ def test_stream_read_xbrl_sync(
             ((date(2023, 3, 2), date(2023, 3, 2)), get_expected_data('https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip')),
         )
 
-@mock_s3
+@mock_aws
 def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
     mock_companies_house_daily_zip,
     mock_companies_house_daily_html,
@@ -723,7 +723,7 @@ def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
     assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02--2023-03-02.csv')['Body'].read().decode().splitlines()))
 
 
-@mock_s3
+@mock_aws
 def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
     mock_companies_house_daily_zip,
     mock_companies_house_daily_html,
@@ -752,7 +752,7 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
     assert expected_data_str == list(csv.DictReader(s3_client.get_object(Bucket=bucket_name, Key=f'{key_prefix}2023-03-02--2023-03-02.csv')['Body'].read().decode().splitlines()))
 
 
-@mock_s3
+@mock_aws
 def test_debug(
     mock_companies_house_historic_zip_2008,
 ):
