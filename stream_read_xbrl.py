@@ -99,7 +99,8 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
             text.replace('.', '').replace(',', '.') if element.get('format', '').rpartition(':')[2] == 'numdotcomma' else \
             text.replace(' ', '') if element.get('format', '').rpartition(':')[2] == 'numspacedot' else \
             text.replace(',', '')
-
+        if ' ' in text_without_thousands_separator:
+            text_without_thousands_separator = sum(map(Decimal, text_without_thousands_separator.split(" ")))
         return sign * Decimal(text_without_thousands_separator) * Decimal(10) ** Decimal(element.get('scale', '0'))
 
     def _parse_decimal_with_colon_or_dash(element, text):
