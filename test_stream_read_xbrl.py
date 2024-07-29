@@ -1072,3 +1072,41 @@ def test_parsing_error_captured_in_error_column():
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = list(rows)[0]
         assert dict(zip(columns, row))['error'] == "Unknown string format: 31ABC2018"
+
+def test_multi_valued_cell():
+    html = '''
+        <html>
+            <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
+                <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="FY31032024A">
+                    <xbrli:entity>
+                        <xbrli:identifier scheme=" http://www.companieshouse.gov.uk/">04799971</xbrli:identifier>
+                    </xbrli:entity>
+                    <xbrli:period>
+                        <xbrli:instant>2024-03-31</xbrli:instant>
+                    </xbrli:period>
+                </xbrli:context>
+            </ix:resources>
+            <ix:nonfraction 
+                xmlns:ix="http://www.xbrl.org/2008/inlineXBRL" 
+                contextRef="FY31032024A" 
+                decimals="0" 
+                format="ixt2:numdotdecimal" 
+                name="core:CashBankOnHand" 
+                unitRef="GBP">
+                228,726 750,000	
+            </ix:nonfraction>
+        </html>
+    '''.encode()
+
+    member_files = (
+        (
+            'Prod223_3383_00001346_20220930.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['cash_bank_in_hand'] == 978726, dict(zip(columns, row))['cash_bank_in_hand']
