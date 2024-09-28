@@ -30,7 +30,7 @@ dev = [
     "moto[s3]>=5.0.0",
     "pytest-cov>=4.0.0",
     "pytest-httpx>=0.21.3",
-    "pytest>=7.2.1",
+    "pytest>=7.2.1,<8",  # Some tests fail on v8, not found quite why
     "stream-zip>=0.0.57",
 ]
 
