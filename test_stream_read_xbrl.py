@@ -645,12 +645,32 @@ def mock_companies_house_historic_html(httpx_mock):
         ''',
     )
 
+@pytest.fixture
+def mock_companies_house_invalid_inner_zip(httpx_mock):
+    with open('fixtures/Accounts_Bulk_Data-2025-05-03.zip', 'rb') as f:
+        content = f.read()
+        httpx_mock.add_response(
+            url='https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip',
+            content=content,
+            headers={
+                'etag': '"the-tag"',
+                'content-range': f'0-{len(content) - 1}/{len(content)}',
+                'content-length': str(len(content)),
+            },
+        )
 
 def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
     with \
             httpx.stream('GET', 'https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip') as r, \
             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
         assert tuple((dict(zip(columns, row)) for row in rows)) == get_expected_data(None)
+
+
+def test_skip_invalid_files(mock_companies_house_invalid_inner_zip):
+    with \
+            httpx.stream('GET', 'https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip') as r, \
+            stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
+        x = tuple((dict(zip(columns, row)) for row in rows))
 
 
 def test_stream_read_xbrl_sync(
