@@ -82,7 +82,7 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
 
     def _parse(element, text, parser):
         return \
-            parser(element, text.strip()) if text and text.strip() not in ['', '-'] else \
+            parser(element, text.strip()) if text and text.strip() not in ['', '-', '—'] else \
             None
 
     def _parse_str(element, text):
@@ -790,6 +790,9 @@ def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_fold
     for name, _, chunks in stream_unzip(local_chunks()):
         fn = os.path.basename(name.decode('utf-8'))
         mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
+        if not mo:
+            logging.warning("Invalid file. Skipping: %s", fn)
+            return []
         _run_code, _company_id, _date, _ = mo.groups()
         # print(_run_code, _company_id, _date)
 

@@ -1130,3 +1130,42 @@ def test_multi_valued_cell():
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = list(rows)[0]
         assert dict(zip(columns, row))['cash_bank_in_hand'] == 978726, dict(zip(columns, row))['cash_bank_in_hand']
+
+def test_parsing_decimal_emdash():
+    html = '''
+        <html>
+            <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
+                <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="c-1">
+                    <xbrli:entity>
+                        <xbrli:identifier scheme="http://www.hmrc.gov.uk/">01849064</xbrli:identifier>
+                    </xbrli:entity>
+                    <xbrli:period>
+                        <xbrli:startDate>2024-01-01</xbrli:startDate>
+                        <xbrli:endDate>2024-12-31</xbrli:endDate>
+                    </xbrli:period>
+                </xbrli:context>
+            </ix:resources> 
+            <ix:nonFraction 
+                xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
+                unitRef="u-2" 
+                contextRef="c-1" 
+                decimals="0" 
+                name="core:TurnoverRevenue" 
+                format="ixt:zerodash">
+                &#8212;
+            </ix:nonFraction>
+        </html>
+    '''.encode() 
+
+    member_files = (
+        (
+            'Prod223_4046_01849064_20241231.html',
+            datetime.now(),
+            0o600,
+            ZIP_32,
+            (html,),
+        ),
+    )
+    with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
+        row = list(rows)[0]
+        assert dict(zip(columns, row))['turnover_gross_operating_revenue'] == None
