@@ -3,23 +3,23 @@ import datetime
 import hashlib
 import logging
 import os
+import pathlib
 import re
 import sys
 import urllib.parse
-from dataclasses import dataclass
 from collections import defaultdict, deque
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
+from dataclasses import dataclass
 from decimal import Decimal
-from itertools import chain
 from io import BytesIO, IOBase
-from pathlib import Path, PurePosixPath
-from typing import Optional, Callable
+from itertools import chain
+from typing import Callable, Optional
 
 import dateutil
 import dateutil.parser
-from bs4 import BeautifulSoup
 import httpx
+from bs4 import BeautifulSoup
 from lxml import etree
 from lxml.etree import XMLSyntaxError
 from stream_unzip import stream_unzip
@@ -737,9 +737,9 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
     s3_paginator = s3_client.get_paginator('list_objects_v2')
     dates = (
         # The -10: is to support older versions where only the end date was in the file name
-        datetime.date.fromisoformat(PurePosixPath(content['Key']).stem[-10:])
+        datetime.date.fromisoformat(pathlib.PurePosixPath(content["Key"]).stem[-10:])
         for page in s3_paginator.paginate(Bucket=bucket_name, Prefix=key_prefix)
-        for content in page.get('Contents', ())
+        for content in page.get("Contents", ())
     )
     latest_completed_date = max(dates, default=datetime.date(datetime.MINYEAR, 1, 1))
 
@@ -753,19 +753,17 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
 
 
 def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_folder=".debug-cache"):
-    Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
 
     # Hashing so we have a filesystem-safe URL
     hashed_zip_url = hashlib.sha256(zip_url.encode('utf-8')).hexdigest()
-    local_zip_file = Path(debug_cache_folder).joinpath(hashed_zip_url)
+    local_zip_file = pathlib.Path(debug_cache_folder).joinpath(hashed_zip_url)
 
     if not local_zip_file.exists():
         print('The ZIP', zip_url, 'does not exist in local cache. Downloading...', file=sys.stderr)
         done = False
         try:
-            with \
-                    httpx.stream('GET', zip_url) as r, \
-                    open(local_zip_file, 'wb') as f:
+            with httpx.stream("GET", zip_url) as r, pathlib.Path.open(local_zip_file, "wb") as f:
                 r.raise_for_status()
                 for chunk in r.iter_bytes():
                     f.write(chunk)
@@ -778,7 +776,7 @@ def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_fold
         print('Found', zip_url, 'in local cache', file=sys.stderr)
 
     def local_chunks():
-        with open(local_zip_file, 'rb') as f:
+        with pathlib.Path.open(local_zip_file, "rb") as f:
             while True:
                 chunk = f.read(65536)
                 if not chunk:
