@@ -1,6 +1,11 @@
+"""Tests for stream-read-xbrl."""
+
+from __future__ import annotations
+
 import csv
 import pathlib
 import tempfile
+import typing
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -16,6 +21,9 @@ from stream_read_xbrl import (
     stream_read_xbrl_sync_s3_csv,
     stream_read_xbrl_zip,
 )
+
+if typing.TYPE_CHECKING:
+    import pytest_httpx
 
 expected_data = (
     {
@@ -556,12 +564,12 @@ expected_data = (
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 
 
-def get_expected_data(zip_url):
+def get_expected_data(zip_url: pathlib.Path | None) -> tuple[dict[str, typing.Any], ...]:
     return tuple({**row, "zip_url": zip_url} for row in expected_data)
 
 
 @pytest.fixture
-def mock_companies_house_daily_zip(httpx_mock):
+def mock_companies_house_daily_zip(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
@@ -576,7 +584,7 @@ def mock_companies_house_daily_zip(httpx_mock):
 
 
 @pytest.fixture
-def mock_companies_house_monthly_zip(httpx_mock):
+def mock_companies_house_monthly_zip(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
@@ -591,7 +599,7 @@ def mock_companies_house_monthly_zip(httpx_mock):
 
 
 @pytest.fixture
-def mock_companies_house_historic_zip_2008(httpx_mock):
+def mock_companies_house_historic_zip_2008(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
@@ -606,7 +614,7 @@ def mock_companies_house_historic_zip_2008(httpx_mock):
 
 
 @pytest.fixture
-def mock_companies_house_historic_zip_2009(httpx_mock):
+def mock_companies_house_historic_zip_2009(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
@@ -621,15 +629,16 @@ def mock_companies_house_historic_zip_2009(httpx_mock):
 
 
 @pytest.fixture
-def mock_companies_house_daily_zip_404(httpx_mock):
+def mock_companies_house_daily_zip_404(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         httpx_mock.add_response(
             url="https://download.companieshouse.gov.uk/does-not-exist.zip",
             status_code=404,
         )
 
+
 @pytest.fixture
-def mock_companies_house_daily_html(httpx_mock):
+def mock_companies_house_daily_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     httpx_mock.add_response(
         url="https://download.companieshouse.gov.uk/en_accountsdata.html",
         content=b"""
@@ -638,8 +647,9 @@ def mock_companies_house_daily_html(httpx_mock):
         """,
     )
 
+
 @pytest.fixture
-def mock_companies_house_monthly_html(httpx_mock):
+def mock_companies_house_monthly_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     httpx_mock.add_response(
         url="https://download.companieshouse.gov.uk/en_monthlyaccountsdata.html",
         content=b"""
@@ -648,8 +658,9 @@ def mock_companies_house_monthly_html(httpx_mock):
         """,
     )
 
+
 @pytest.fixture
-def mock_companies_house_historic_html(httpx_mock):
+def mock_companies_house_historic_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     httpx_mock.add_response(
         url="https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html",
         content=b"""
@@ -659,8 +670,9 @@ def mock_companies_house_historic_html(httpx_mock):
         """,
     )
 
+
 @pytest.fixture
-def mock_companies_house_invalid_inner_zip(httpx_mock):
+def mock_companies_house_invalid_inner_zip(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2025-05-03.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
@@ -673,29 +685,33 @@ def mock_companies_house_invalid_inner_zip(httpx_mock):
             },
         )
 
-def test_stream_read_xbrl_zip(mock_companies_house_daily_zip):
+
+@pytest.mark.usefixtures("mock_companies_house_daily_zip")
+def test_stream_read_xbrl_zip() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
         assert tuple((dict(zip(columns, row)) for row in rows)) == get_expected_data(None)
 
 
-def test_skip_invalid_files(mock_companies_house_invalid_inner_zip):
+@pytest.mark.usefixtures("mock_companies_house_invalid_inner_zip")
+def test_skip_invalid_files() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
         x = tuple((dict(zip(columns, row)) for row in rows))
 
 
-def test_stream_read_xbrl_sync(
-    mock_companies_house_daily_zip,
-    mock_companies_house_daily_html,
-    mock_companies_house_monthly_html,
-    mock_companies_house_monthly_zip,
-    mock_companies_house_historic_html,
-    mock_companies_house_historic_zip_2008,
-    mock_companies_house_historic_zip_2009,
-):
+@pytest.mark.usefixtures(
+    "mock_companies_house_daily_zip",
+    "mock_companies_house_daily_html",
+    "mock_companies_house_monthly_html",
+    "mock_companies_house_monthly_zip",
+    "mock_companies_house_historic_html",
+    "mock_companies_house_historic_zip_2008",
+    "mock_companies_house_historic_zip_2009",
+)
+def test_stream_read_xbrl_sync() -> None:
     with stream_read_xbrl_sync() as (columns, date_range_and_rows):
         assert tuple(
             (
@@ -753,16 +769,18 @@ def test_stream_read_xbrl_sync(
             ),
         )
 
+
+@pytest.mark.usefixtures(
+    "mock_companies_house_daily_zip",
+    "mock_companies_house_daily_html",
+    "mock_companies_house_monthly_html",
+    "mock_companies_house_monthly_zip",
+    "mock_companies_house_historic_html",
+    "mock_companies_house_historic_zip_2008",
+    "mock_companies_house_historic_zip_2009",
+)
 @mock_aws
-def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
-    mock_companies_house_daily_zip,
-    mock_companies_house_daily_html,
-    mock_companies_house_monthly_html,
-    mock_companies_house_monthly_zip,
-    mock_companies_house_historic_html,
-    mock_companies_house_historic_zip_2008,
-    mock_companies_house_historic_zip_2009,
-):
+def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty() -> None:
     region_name = "eu-west-2"
     bucket_name = "my-bucket"
     key_prefix = "my-prefix/"  # Would usually end in a forward slash
@@ -808,13 +826,14 @@ def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty(
     )
 
 
+@pytest.mark.usefixtures(
+    "mock_companies_house_daily_zip",
+    "mock_companies_house_daily_html",
+    "mock_companies_house_monthly_html",
+    "mock_companies_house_historic_html",
+)
 @mock_aws
-def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
-    mock_companies_house_daily_zip,
-    mock_companies_house_daily_html,
-    mock_companies_house_monthly_html,
-    mock_companies_house_historic_html,
-):
+def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone() -> None:
     region_name = "eu-west-2"
     bucket_name = "my-bucket"
     key_prefix = "my-prefix/"  # Would usually end in a forward slash
@@ -853,10 +872,9 @@ def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone(
     )
 
 
+@pytest.mark.usefixtures("mock_companies_house_historic_zip_2008")
 @mock_aws
-def test_debug(
-    mock_companies_house_historic_zip_2008,
-):
+def test_debug() -> None:
     # Just asserts it doesn't explode
     with tempfile.TemporaryDirectory() as directory:
         stream_read_xbrl_debug(
@@ -868,7 +886,7 @@ def test_debug(
         )
 
 
-def test_entity_current_legal_name_in_span():
+def test_entity_current_legal_name_in_span() -> None:
     html = """
         <html>
         <ix:nonnumeric name="c:EntityCurrentLegalOrRegisteredName" xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
@@ -891,7 +909,7 @@ def test_entity_current_legal_name_in_span():
         assert dict(zip(columns, row))["entity_current_legal_name"] == "The name"
 
 
-def test_employee_numbers_not_negative():
+def test_employee_numbers_not_negative() -> None:
     html = """
         <html>
             <ix:nonfraction
@@ -918,7 +936,8 @@ def test_employee_numbers_not_negative():
         row = list(rows)[0]
         assert dict(zip(columns, row))["average_number_employees_during_period"] == 8
 
-def test_employee_numbers_numdotcomma():
+
+def test_employee_numbers_numdotcomma() -> None:
     html = """
         <html>
             <ix:nonfraction
@@ -943,7 +962,8 @@ def test_employee_numbers_numdotcomma():
         row = list(rows)[0]
         assert dict(zip(columns, row))["average_number_employees_during_period"] == 800
 
-def test_date_in_format():
+
+def test_date_in_format() -> None:
     html_1 = """
         <html>
             <ix:nonNumeric  
@@ -985,9 +1005,9 @@ def test_date_in_format():
     )
 
     member_files = (
-            base_file+((html_1,),),
-            base_file+((html_2,),),
-            base_file+((html_3,),),
+        base_file + ((html_1,),),
+        base_file + ((html_2,),),
+        base_file + ((html_3,),),
     )
 
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
@@ -998,7 +1018,7 @@ def test_date_in_format():
         )
 
 
-def test_split_date():
+def test_split_date() -> None:
     html = """
         <html>
             <ix:nonNumeric  
@@ -1022,7 +1042,8 @@ def test_split_date():
         row = list(rows)[0]
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
-def test_date_with_whitespace():
+
+def test_date_with_whitespace() -> None:
     html = """
         <html>
             <ix:nonNumeric
@@ -1048,7 +1069,7 @@ def test_date_with_whitespace():
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
-def test_date_with_exclude():
+def test_date_with_exclude() -> None:
     html = """
         <html>
             <ix:nonNumeric
@@ -1074,7 +1095,7 @@ def test_date_with_exclude():
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-07-31")
 
 
-def test_date_with_incorrect_spelling():
+def test_date_with_incorrect_spelling() -> None:
     html = """
         <html>
             <ix:nonNumeric
@@ -1099,7 +1120,8 @@ def test_date_with_incorrect_spelling():
         row = list(rows)[0]
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-01-31")
 
-def test_date_with_suffix():
+
+def test_date_with_suffix() -> None:
     html = """
         <html>
             <ix:nonNumeric
@@ -1124,7 +1146,8 @@ def test_date_with_suffix():
         row = list(rows)[0]
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
-def test_date_with_capitalised_suffix():
+
+def test_date_with_capitalised_suffix() -> None:
     html = """
         <html>
             <ix:nonNumeric
@@ -1149,7 +1172,8 @@ def test_date_with_capitalised_suffix():
         row = list(rows)[0]
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
-def test_parsing_error_captured_in_error_column():
+
+def test_parsing_error_captured_in_error_column() -> None:
     html = """
         <html>
             <ix:nonNumeric
@@ -1174,7 +1198,8 @@ def test_parsing_error_captured_in_error_column():
         row = list(rows)[0]
         assert dict(zip(columns, row))["error"] == "Unknown string format: 31ABC2018"
 
-def test_multi_valued_cell():
+
+def test_multi_valued_cell() -> None:
     html = """
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
@@ -1212,7 +1237,8 @@ def test_multi_valued_cell():
         row = list(rows)[0]
         assert dict(zip(columns, row))["cash_bank_in_hand"] == 978726, dict(zip(columns, row))["cash_bank_in_hand"]
 
-def test_parsing_decimal_emdash():
+
+def test_parsing_decimal_emdash() -> None:
     html = """
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
