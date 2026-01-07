@@ -461,7 +461,7 @@ def _xbrl_to_rows(
         document = lxml.etree.parse(xbrl_xml_str, lxml.etree.XMLParser(ns_clean=True, recover=True))
         root = document.getroot()
         document.xpath("//*[0]")
-    except:
+    except (lxml.etree.Error, AssertionError):
         # In at least one case - Prod224_9956_04944372_20100331.xml, the XML seems very badly formed.
         # Suspect this is before Companies House had better validation. The best we can do is log and
         # carry on. We can at least still get a row in the data

@@ -1271,4 +1271,4 @@ def test_parsing_decimal_emdash() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["turnover_gross_operating_revenue"] == None
+        assert dict(zip(columns, row))["turnover_gross_operating_revenue"] is None
