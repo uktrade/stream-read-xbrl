@@ -1,6 +1,5 @@
 import csv
 import pathlib
-import re
 import tempfile
 from datetime import date, datetime
 from decimal import Decimal

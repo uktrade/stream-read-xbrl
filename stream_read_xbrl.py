@@ -16,12 +16,10 @@ from io import BytesIO, IOBase
 from itertools import chain
 from typing import Callable, Optional
 
-import dateutil
 import dateutil.parser
 import httpx
 from bs4 import BeautifulSoup
 from lxml import etree
-from lxml.etree import XMLSyntaxError
 from stream_unzip import stream_unzip
 
 _COLUMNS = (
