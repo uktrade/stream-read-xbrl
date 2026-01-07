@@ -17,14 +17,17 @@ repos:
         args: [--unsafe]
       - id: debug-statements
       - id: end-of-file-fixer
+        exclude: docs/.*
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: name-tests-test
         args: [--pytest-test-first]
       - id: pretty-format-json
         args: [--autofix]
+        exclude: package-lock.json
       - id: requirements-txt-fixer
       - id: trailing-whitespace
+        exclude: docs/.*
   - repo: local
     hooks:
       - id: mypy-check
