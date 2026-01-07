@@ -925,7 +925,8 @@ def test_employee_numbers_not_negative() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["average_number_employees_during_period"] == 8
+        correct_avg_num_employees = 8
+        assert dict(zip(columns, row))["average_number_employees_during_period"] == correct_avg_num_employees
 
 
 def test_employee_numbers_numdotcomma() -> None:
@@ -951,7 +952,8 @@ def test_employee_numbers_numdotcomma() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["average_number_employees_during_period"] == 800
+        correct_avg_num_employees = 800
+        assert dict(zip(columns, row))["average_number_employees_during_period"] == correct_avg_num_employees
 
 
 def test_date_in_format() -> None:
@@ -1226,7 +1228,10 @@ def test_multi_valued_cell() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["cash_bank_in_hand"] == 978726, dict(zip(columns, row))["cash_bank_in_hand"]
+        correct_cash_bank = 978726
+        assert dict(zip(columns, row))["cash_bank_in_hand"] == correct_cash_bank, dict(zip(columns, row))[
+            "cash_bank_in_hand"
+        ]
 
 
 def test_parsing_decimal_emdash() -> None:

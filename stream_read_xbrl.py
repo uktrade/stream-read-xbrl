@@ -98,7 +98,7 @@ def _xbrl_to_rows(
         text: str,
         parser: collections.abc.Callable[[Element, str], typing.Any],
     ) -> decimal.Decimal | None:
-        return parser(element, text.strip()) if text and text.strip() not in ["", "-", "—"] else None
+        return parser(element, text.strip()) if text and text.strip() not in {"", "-", "—"} else None
 
     def _parse_str(element: Element, text: str) -> str:
         return str(text).replace("\n", " ").replace('"', "")
@@ -137,7 +137,7 @@ def _xbrl_to_rows(
 
     def _parse_date(element: Element, text: str) -> datetime.date:
         format = element.get("format", "").rpartition(":")[2].lower()
-        day_first = format in ("datedaymonthyear", "dateslasheu", "datedoteu")
+        day_first = format in {"datedaymonthyear", "dateslasheu", "datedoteu"}
         if format == "datedaymonthyearen":
             text = text.replace(" ", "")
         text = re.sub(r"(?i)(\d)((st)|(nd)|(rd)|(th))", r"\1", text)
@@ -538,9 +538,9 @@ def _xbrl_to_rows(
         if priority > best_priority:
             return
 
-        for element in test.search(element, local_name, attribute_value, context_ref):
-            filtered = ((e.text or "") for e in element.iter() if e.tag.rpartition("}")[2] != "exclude")
-            value = _parse(element, "".join(filtered), parse)
+        for found_element in test.search(element, local_name, attribute_value, context_ref):
+            filtered = ((e.text or "") for e in found_element.iter() if e.tag.rpartition("}")[2] != "exclude")
+            value = _parse(found_element, "".join(filtered), parse)
             if value is not None:
                 general_attributes_with_priorities[name] = (priority, value)
                 break
@@ -561,14 +561,14 @@ def _xbrl_to_rows(
         if not dates:
             return
 
-        for element in test.search(element, local_name, attribute_value, context_ref):
+        for found_element in test.search(element, local_name, attribute_value, context_ref):
             best_priority, _best_value = periodic_attributes_with_priorities[dates][name]
 
             if priority >= best_priority:
                 return
 
-            filtered = ((e.text or "") for e in element.iter() if lxml.etree.QName(e).localname != "exclude")
-            value = _parse(element, "".join(filtered), parse)
+            filtered = ((e.text or "") for e in found_element.iter() if lxml.etree.QName(e).localname != "exclude")
+            value = _parse(found_element, "".join(filtered), parse)
             if value is not None:
                 periodic_attributes_with_priorities[dates][name] = (priority, value)
                 break
@@ -725,9 +725,8 @@ def stream_read_xbrl_sync(
                     r.raise_for_status()
                     if etag is None:
                         etag = r.headers["etag"]
-                    else:
-                        if etag != r.headers["etag"]:
-                            raise Exception("etag has changed since beginning requests")
+                    elif etag != r.headers["etag"]:
+                        raise Exception("etag has changed since beginning requests")
                     if remaining is None:
                         remaining = int(r.headers["content-range"].split("/")[1])
                     content_length = int(r.headers["content-length"])
@@ -811,10 +810,12 @@ def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name:
                 yield chunk[offset - to_yield : offset]
 
         class FileLikeObj(io.IOBase):
-            def readable(self) -> bool:
+            @staticmethod
+            def readable() -> bool:
                 return True
 
-            def read(self, size: float = -1) -> bytes:
+            @staticmethod
+            def read(size: float = -1) -> bytes:
                 return b"".join(up_to_iter(float("inf") if size is None or size < 0 else size))
 
         return typing.cast("typing.BinaryIO", FileLikeObj())
@@ -823,7 +824,8 @@ def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name:
         columns: tuple[str, ...], rows: typing.Generator[XBRLRow, None, None]
     ) -> typing.Generator[bytes, None, None]:
         class PseudoBuffer:
-            def write(self, value: str) -> bytes:
+            @staticmethod
+            def write(value: str) -> bytes:
                 return value.encode("utf-8")
 
         pseudo_buffer = PseudoBuffer()

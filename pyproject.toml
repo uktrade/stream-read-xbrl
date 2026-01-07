@@ -12,7 +12,7 @@ preview = true
 [tool.ruff.lint]
 preview = true
 select = ["ALL"]
-ignore = ["COM812", "CPY001", "T201", "S404", "S603", "S607", "PLR0914", "PLR0915", "C901"]
+ignore = ["COM812", "CPY001", "T201", "S404", "S603", "S607", "PLR0913", "PLR0914", "PLR0915", "PLR0917", "C901"]
 
 [tool.ruff.lint.per-file-ignores]
 "test_stream_read_xbrl.py" = ["D1", "S101"]
