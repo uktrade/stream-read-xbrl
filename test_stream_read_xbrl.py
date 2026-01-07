@@ -31,22 +31,22 @@ expected_data = (
         "average_number_employees_during_period": Decimal("0.02"),  # Strange, but the source seems to say this
         "balance_sheet_date": date.fromisoformat("2022-12-31"),
         "called_up_share_capital": None,
-        "cash_bank_in_hand": Decimal("214222"),
+        "cash_bank_in_hand": Decimal(214222),
         "companies_house_registered_number": "09355500",
         "company_dormant": None,
         "company_id": "09355500",
         "cost_sales": None,
         "creditors_due_after_one_year": None,
         "creditors_due_within_one_year": None,
-        "current_assets": Decimal("259832"),
+        "current_assets": Decimal(259832),
         "date": date.fromisoformat("2022-12-31"),
         "debtors": None,
         "depreciation_other_amounts_written_off_tangible_intangible_fixed_assets": None,
         "entity_current_legal_name": "SUGANTHI & VELAVAN LTD",
         "file_type": "html",
         "gross_profit_loss": None,
-        "net_assets_liabilities_including_pension_asset_liability": Decimal("375004"),
-        "net_current_assets_liabilities": Decimal("215234"),
+        "net_assets_liabilities_including_pension_asset_liability": Decimal(375004),
+        "net_current_assets_liabilities": Decimal(215234),
         "operating_profit_loss": None,
         "other_operating_charges_format2": None,
         "other_operating_income": None,
@@ -57,9 +57,9 @@ expected_data = (
         "profit_loss_on_ordinary_activities_before_tax": None,
         "raw_materials_consumables": None,
         "run_code": "Prod223_3384",
-        "shareholder_funds": Decimal("200"),
+        "shareholder_funds": Decimal(200),
         "staff_costs": None,
-        "tangible_fixed_assets": Decimal("159770"),
+        "tangible_fixed_assets": Decimal(159770),
         "tax_on_profit_or_loss_on_ordinary_activities": None,
         "taxonomy": "",
         "total_assets_less_current_liabilities": None,
@@ -72,22 +72,22 @@ expected_data = (
         "average_number_employees_during_period": Decimal("0.02"),  # Strange, but the source seems to say this
         "balance_sheet_date": date.fromisoformat("2022-12-31"),
         "called_up_share_capital": None,
-        "cash_bank_in_hand": Decimal("118470"),
+        "cash_bank_in_hand": Decimal(118470),
         "companies_house_registered_number": "09355500",
         "company_dormant": None,
         "company_id": "09355500",
         "cost_sales": None,
         "creditors_due_after_one_year": None,
         "creditors_due_within_one_year": None,
-        "current_assets": Decimal("160520"),
+        "current_assets": Decimal(160520),
         "date": date.fromisoformat("2022-12-31"),
         "debtors": None,
         "depreciation_other_amounts_written_off_tangible_intangible_fixed_assets": None,
         "entity_current_legal_name": "SUGANTHI & VELAVAN LTD",
         "file_type": "html",
         "gross_profit_loss": None,
-        "net_assets_liabilities_including_pension_asset_liability": Decimal("285564"),
-        "net_current_assets_liabilities": Decimal("125565"),
+        "net_assets_liabilities_including_pension_asset_liability": Decimal(285564),
+        "net_current_assets_liabilities": Decimal(125565),
         "operating_profit_loss": None,
         "other_operating_charges_format2": None,
         "other_operating_income": None,
@@ -98,9 +98,9 @@ expected_data = (
         "profit_loss_on_ordinary_activities_before_tax": None,
         "raw_materials_consumables": None,
         "run_code": "Prod223_3384",
-        "shareholder_funds": Decimal("150"),
+        "shareholder_funds": Decimal(150),
         "staff_costs": None,
-        "tangible_fixed_assets": Decimal("159999"),
+        "tangible_fixed_assets": Decimal(159999),
         "tax_on_profit_or_loss_on_ordinary_activities": None,
         "taxonomy": "",
         "total_assets_less_current_liabilities": None,
@@ -630,7 +630,7 @@ def mock_companies_house_historic_zip_2009(httpx_mock: pytest_httpx.HTTPXMock) -
 
 @pytest.fixture
 def mock_companies_house_daily_zip_404(httpx_mock: pytest_httpx.HTTPXMock) -> None:
-    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb"):
         httpx_mock.add_response(
             url="https://download.companieshouse.gov.uk/does-not-exist.zip",
             status_code=404,
@@ -691,7 +691,7 @@ def test_stream_read_xbrl_zip() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        assert tuple((dict(zip(columns, row)) for row in rows)) == get_expected_data(None)
+        assert tuple(dict(zip(columns, row)) for row in rows) == get_expected_data(None)
 
 
 @pytest.mark.usefixtures("mock_companies_house_invalid_inner_zip")
@@ -699,7 +699,7 @@ def test_skip_invalid_files() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        x = tuple((dict(zip(columns, row)) for row in rows))
+        assert tuple(dict(zip(columns, row)) for row in rows) != get_expected_data(None)
 
 
 @pytest.mark.usefixtures(
@@ -714,10 +714,7 @@ def test_skip_invalid_files() -> None:
 def test_stream_read_xbrl_sync() -> None:
     with stream_read_xbrl_sync() as (columns, date_range_and_rows):
         assert tuple(
-            (
-                (date_range, tuple((dict(zip(columns, row)) for row in rows)))
-                for (date_range, rows) in date_range_and_rows
-            )
+            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
         ) == (
             (
                 (date(2008, 1, 1), date(2008, 12, 31)),
@@ -741,10 +738,7 @@ def test_stream_read_xbrl_sync() -> None:
 
     with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, date_range_and_rows):
         assert tuple(
-            (
-                (date_range, tuple((dict(zip(columns, row)) for row in rows)))
-                for (date_range, rows) in date_range_and_rows
-            )
+            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
         ) == (
             (
                 (date(2022, 7, 1), date(2022, 7, 31)),
@@ -758,10 +752,7 @@ def test_stream_read_xbrl_sync() -> None:
 
     with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, date_range_and_rows):
         assert tuple(
-            (
-                (date_range, tuple((dict(zip(columns, row)) for row in rows)))
-                for (date_range, rows) in date_range_and_rows
-            )
+            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
         ) == (
             (
                 (date(2023, 3, 2), date(2023, 3, 2)),
@@ -887,30 +878,30 @@ def test_debug() -> None:
 
 
 def test_entity_current_legal_name_in_span() -> None:
-    html = """
+    html = b"""
         <html>
         <ix:nonnumeric name="c:EntityCurrentLegalOrRegisteredName" xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
             <span>The name</span>
         </ix:nonnumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["entity_current_legal_name"] == "The name"
 
 
 def test_employee_numbers_not_negative() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonfraction
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
@@ -921,24 +912,25 @@ def test_employee_numbers_not_negative() -> None:
                 8
             </ix:nonfraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
-        assert dict(zip(columns, row))["average_number_employees_during_period"] == 8
+        row = next(iter(rows))
+        correct_avg_num_employees = 8
+        assert dict(zip(columns, row))["average_number_employees_during_period"] == correct_avg_num_employees
 
 
 def test_employee_numbers_numdotcomma() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonfraction
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
@@ -947,24 +939,25 @@ def test_employee_numbers_numdotcomma() -> None:
                 8.00
             </ix:nonfraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
-        assert dict(zip(columns, row))["average_number_employees_during_period"] == 800
+        row = next(iter(rows))
+        correct_avg_num_employees = 800
+        assert dict(zip(columns, row))["average_number_employees_during_period"] == correct_avg_num_employees
 
 
 def test_date_in_format() -> None:
-    html_1 = """
+    html_1 = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyear"
@@ -973,9 +966,9 @@ def test_date_in_format() -> None:
                 10.2.23
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
-    html_2 = """
+    html_2 = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:dateslasheu"
@@ -984,9 +977,9 @@ def test_date_in_format() -> None:
                 10/2/23
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
-    html_3 = """
+    html_3 = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedoteu"
@@ -995,19 +988,19 @@ def test_date_in_format() -> None:
                 10.2.23
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     base_file = (
         "Prod223_3383_00001346_20220930.html",
-        datetime.now(),
+        datetime.now().astimezone(),
         0o600,
         ZIP_32,
     )
 
     member_files = (
-        base_file + ((html_1,),),
-        base_file + ((html_2,),),
-        base_file + ((html_3,),),
+        (*base_file, (html_1,)),
+        (*base_file, (html_2,)),
+        (*base_file, (html_3,)),
     )
 
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
@@ -1019,7 +1012,7 @@ def test_date_in_format() -> None:
 
 
 def test_split_date() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 name="ns11:BalanceSheetDate"
@@ -1027,24 +1020,24 @@ def test_split_date() -> None:
                 10 February 202<j>0</j>
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
 def test_date_with_whitespace() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1053,24 +1046,24 @@ def test_date_with_whitespace() -> None:
                 10 Februar y 2020
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
 def test_date_with_exclude() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt:datelonguk"
@@ -1079,24 +1072,24 @@ def test_date_with_exclude() -> None:
                 <ix:exclude> 31 July 2017</ix:exclude><span style="display:none">31 July 2017</span>
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-07-31")
 
 
 def test_date_with_incorrect_spelling() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1105,24 +1098,24 @@ def test_date_with_incorrect_spelling() -> None:
                 31 Janaury 2017
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-01-31")
 
 
 def test_date_with_suffix() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1131,24 +1124,24 @@ def test_date_with_suffix() -> None:
                 31st March 2017
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
 
 def test_date_with_capitalised_suffix() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1157,24 +1150,24 @@ def test_date_with_capitalised_suffix() -> None:
                 31ST March 2017
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
 
 def test_parsing_error_captured_in_error_column() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1183,24 +1176,24 @@ def test_parsing_error_captured_in_error_column() -> None:
                 31 ABCDEF 2018
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["error"] == "Unknown string format: 31ABC2018"
 
 
 def test_multi_valued_cell() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
                 <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="FY31032024A">
@@ -1222,24 +1215,27 @@ def test_multi_valued_cell() -> None:
                 228,726 750,000
             </ix:nonfraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
-        assert dict(zip(columns, row))["cash_bank_in_hand"] == 978726, dict(zip(columns, row))["cash_bank_in_hand"]
+        row = next(iter(rows))
+        correct_cash_bank = 978726
+        assert dict(zip(columns, row))["cash_bank_in_hand"] == correct_cash_bank, dict(zip(columns, row))[
+            "cash_bank_in_hand"
+        ]
 
 
 def test_parsing_decimal_emdash() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
                 <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="c-1">
@@ -1262,17 +1258,17 @@ def test_parsing_decimal_emdash() -> None:
                 &#8212;
             </ix:nonFraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
             "Prod223_4046_01849064_20241231.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
-        assert dict(zip(columns, row))["turnover_gross_operating_revenue"] == None
+        row = next(iter(rows))
+        assert dict(zip(columns, row))["turnover_gross_operating_revenue"] is None

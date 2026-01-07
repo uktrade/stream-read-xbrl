@@ -11,6 +11,7 @@ import decimal
 import hashlib
 import io
 import logging
+import operator
 import os
 import pathlib
 import re
@@ -97,9 +98,9 @@ def _xbrl_to_rows(
         text: str,
         parser: collections.abc.Callable[[Element, str], typing.Any],
     ) -> decimal.Decimal | None:
-        return parser(element, text.strip()) if text and text.strip() not in ["", "-", "—"] else None
+        return parser(element, text.strip()) if text and text.strip() not in {"", "-", "—"} else None
 
-    def _parse_str(element: Element, text: str) -> str:
+    def _parse_str(_element: Element, text: str) -> str:
         return str(text).replace("\n", " ").replace('"', "")
 
     def _parse_absolute(element: Element, text: str) -> decimal.Decimal | None:
@@ -135,9 +136,9 @@ def _xbrl_to_rows(
         return _parse(element, re.sub(r"(.*:)|(.+- )", "", text), _parse_decimal)
 
     def _parse_date(element: Element, text: str) -> datetime.date:
-        format = element.get("format", "").rpartition(":")[2].lower()
-        day_first = format in ("datedaymonthyear", "dateslasheu", "datedoteu")
-        if format == "datedaymonthyearen":
+        date_format = element.get("format", "").rpartition(":")[2].lower()
+        day_first = date_format in {"datedaymonthyear", "dateslasheu", "datedoteu"}
+        if date_format == "datedaymonthyearen":
             text = text.replace(" ", "")
         text = re.sub(r"(?i)(\d)((st)|(nd)|(rd)|(th))", r"\1", text)
         try:
@@ -148,10 +149,10 @@ def _xbrl_to_rows(
                 re.sub(r"([a-zA-Z]+)", lambda m: m.group(0)[:3], text), dayfirst=day_first
             ).date()
 
-    def _parse_bool(element: Element, text: str) -> bool | None:
+    def _parse_bool(_element: Element, text: str) -> bool | None:
         return False if text == "false" else True if text == "true" else None
 
-    def _parse_reversed_bool(element: Element, text: str) -> bool | None:
+    def _parse_reversed_bool(_element: Element, text: str) -> bool | None:
         return False if text == "true" else True if text == "false" else None
 
     # Parsing strategy
@@ -172,7 +173,7 @@ def _xbrl_to_rows(
         search: collections.abc.Callable[
             [Element, typing.Any, typing.Any, typing.Any],
             typing.Any,
-        ] = lambda element, local_name, attribute_name, context_ref: (element,)
+        ] = lambda element, _local_name, _attribute_name, _context_ref: (element,)
 
     @dataclass
     class _TN(_TEST):
@@ -207,7 +208,7 @@ def _xbrl_to_rows(
             (
                 _AV(
                     "EntityCurrentLegalOrRegisteredName",
-                    lambda element, local_name, attribute_name, context_ref: chain(
+                    lambda element, _local_name, _attribute_name, _context_ref: chain(
                         (element,),
                         typing.cast("list[Element]", element.xpath("./*[local-name()='span'][1]")),
                     ),
@@ -217,7 +218,7 @@ def _xbrl_to_rows(
             (
                 _TN(
                     "EntityCurrentLegalName",
-                    lambda element, local_name, attribute_name, context_ref: chain(
+                    lambda element, _local_name, _attribute_name, _context_ref: chain(
                         (element,),
                         typing.cast("list[Element]", element.xpath("./*[local-name()='span'][1]")),
                     ),
@@ -271,7 +272,7 @@ def _xbrl_to_rows(
             (
                 _AV(
                     "Creditors",
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, _attribute_name, _context_ref: (
                         (element,) if "WithinOneYear" in element.get("contextRef", "") else ()
                     ),
                 ),
@@ -283,8 +284,8 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
-                        (element,) if "Creditors" == local_name and "AfterOneYear" in context_ref else ()
+                    lambda element, local_name, _attribute_name, context_ref: (
+                        (element,) if local_name == "Creditors" and "AfterOneYear" in context_ref else ()
                     ),
                 ),
                 _parse_decimal,
@@ -310,9 +311,9 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, attribute_name, _context_ref: (
                         (element,)
-                        if "Equity" == attribute_name and "ShareCapital" in element.get("contextRef", "")
+                        if attribute_name == "Equity" and "ShareCapital" in element.get("contextRef", "")
                         else ()
                     ),
                 ),
@@ -325,9 +326,9 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, attribute_name, _context_ref: (
                         (element,)
-                        if "Equity" == attribute_name
+                        if attribute_name == "Equity"
                         and "RetainedEarningsAccumulatedLosses" in element.get("contextRef", "")
                         else ()
                     ),
@@ -341,8 +342,8 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
-                        (element,) if "Equity" == attribute_name and "segment" not in context_ref else ()
+                    lambda element, _local_name, attribute_name, context_ref: (
+                        (element,) if attribute_name == "Equity" and "segment" not in context_ref else ()
                     ),
                 ),
                 _parse_decimal,
@@ -419,25 +420,25 @@ def _xbrl_to_rows(
         ]),
     }
 
-    ALL_MAPPINGS = dict(**GENERAL_XPATH_MAPPINGS, **PERIODICAL_XPATH_MAPPINGS)
+    all_mappings = dict(**GENERAL_XPATH_MAPPINGS, **PERIODICAL_XPATH_MAPPINGS)
 
-    TAG_NAME_TESTS = {
+    tag_name_test_dict = {
         test.name: (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
         if isinstance(test, _TN)
     }
 
-    ATTRIBUTE_VALUE_TESTS = {
+    attribute_value_test_dict = {
         test.name: (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
         if isinstance(test, _AV)
     }
 
-    CUSTOM_TESTS = tuple(
+    custom_tests = tuple(
         (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
         if isinstance(test, _CUSTOM)
     )
@@ -460,7 +461,7 @@ def _xbrl_to_rows(
         document = lxml.etree.parse(xbrl_xml_str, lxml.etree.XMLParser(ns_clean=True, recover=True))
         root = document.getroot()
         document.xpath("//*[0]")
-    except:
+    except (lxml.etree.Error, AssertionError):
         # In at least one case - Prod224_9956_04944372_20100331.xml, the XML seems very badly formed.
         # Suspect this is before Companies House had better validation. The best we can do is log and
         # carry on. We can at least still get a row in the data
@@ -477,7 +478,7 @@ def _xbrl_to_rows(
         for period in typing.cast("list[Element]", e.xpath("./*[local-name()='period']"))[:1]
     }
 
-    fn = os.path.basename(name)
+    fn = pathlib.Path(name).name
     # Some April 2021 data files end in .zip, but seem to really be html
     mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml|zip)", fn)
     if not mo:
@@ -499,28 +500,26 @@ def _xbrl_to_rows(
     )
 
     # Mutable dictionaries to store the "priority" (lower is better) of a found value
-    general_attributes_with_priorities: dict[str, tuple[int, decimal.Decimal | None]] = {
-        name: (10, None) for name in GENERAL_XPATH_MAPPINGS.keys()
-    }
+    general_attributes_with_priorities: dict[str, tuple[int, decimal.Decimal | None]] = dict.fromkeys(
+        GENERAL_XPATH_MAPPINGS.keys(), (10, None)
+    )
     periodic_attributes_with_priorities: collections.defaultdict[
         typing.Any, dict[str, tuple[int, decimal.Decimal | None]]
-    ] = collections.defaultdict(lambda: {name: (10, None) for name in PERIODICAL_XPATH_MAPPINGS.keys()})
+    ] = collections.defaultdict(lambda: dict.fromkeys(PERIODICAL_XPATH_MAPPINGS.keys(), (10, None)))
 
     def tag_name_tests(
         local_name: str,
     ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]]]:
-        try:
-            yield from (TAG_NAME_TESTS[local_name],)
-        except KeyError:
-            pass
+        tag_name_test = tag_name_test_dict.get(local_name)
+        if tag_name_test is not None:
+            yield from (tag_name_test,)
 
     def attribute_value_tests(
         attribute_value: str,
     ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]]]:
-        try:
-            yield from (ATTRIBUTE_VALUE_TESTS[attribute_value],)
-        except KeyError:
-            pass
+        attribute_value_test = attribute_value_test_dict.get(attribute_value)
+        if attribute_value_test is not None:
+            yield from (attribute_value_test,)
 
     def handle_general(
         element: Element,
@@ -532,14 +531,14 @@ def _xbrl_to_rows(
         test: _TEST,
         parse: collections.abc.Callable[[Element, str], typing.Any],
     ) -> None:
-        best_priority, best_value = general_attributes_with_priorities[name]
+        best_priority, _best_value = general_attributes_with_priorities[name]
 
         if priority > best_priority:
             return
 
-        for element in test.search(element, local_name, attribute_value, context_ref):
-            filtered = ((e.text or "") for e in element.iter() if e.tag.rpartition("}")[2] != "exclude")
-            value = _parse(element, "".join(filtered), parse)
+        for found_element in test.search(element, local_name, attribute_value, context_ref):
+            filtered = ((e.text or "") for e in found_element.iter() if e.tag.rpartition("}")[2] != "exclude")
+            value = _parse(found_element, "".join(filtered), parse)
             if value is not None:
                 general_attributes_with_priorities[name] = (priority, value)
                 break
@@ -560,14 +559,14 @@ def _xbrl_to_rows(
         if not dates:
             return
 
-        for element in test.search(element, local_name, attribute_value, context_ref):
-            best_priority, best_value = periodic_attributes_with_priorities[dates][name]
+        for found_element in test.search(element, local_name, attribute_value, context_ref):
+            best_priority, _best_value = periodic_attributes_with_priorities[dates][name]
 
             if priority >= best_priority:
                 return
 
-            filtered = ((e.text or "") for e in element.iter() if lxml.etree.QName(e).localname != "exclude")
-            value = _parse(element, "".join(filtered), parse)
+            filtered = ((e.text or "") for e in found_element.iter() if lxml.etree.QName(e).localname != "exclude")
+            value = _parse(found_element, "".join(filtered), parse)
             if value is not None:
                 periodic_attributes_with_priorities[dates][name] = (priority, value)
                 break
@@ -580,22 +579,23 @@ def _xbrl_to_rows(
             context_ref = element.get("contextRef", "")
 
             for name, priority, test, parse in chain(
-                tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS
+                tag_name_tests(local_name), attribute_value_tests(attribute_value), custom_tests
             ):
                 handler = handle_general if name in general_attributes_with_priorities else handle_periodic
 
                 handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
 
-        general_attributes = tuple(
-            general_attributes_with_priorities[name][1] for name in GENERAL_XPATH_MAPPINGS.keys()
-        )
+        general_attributes = tuple(general_attributes_with_priorities[name][1] for name in GENERAL_XPATH_MAPPINGS)
 
         periods = tuple(
-            (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
-            + tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS.keys())
+            (
+                datetime.date.fromisoformat(period_start_end[0]),
+                datetime.date.fromisoformat(period_start_end[1]),
+                *tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS),
+            )
             for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
         )
-        sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
+        sorted_periods = sorted(periods, key=operator.itemgetter(0, 1), reverse=True)
     except ValueError as e:
         error = str(e)
         return (
@@ -618,6 +618,12 @@ def stream_read_xbrl_zip(
     None,
     None,
 ]:
+    """Streams and parses XBRL files from a ZIP byte-stream.
+
+    Yields:
+    A tuple of (_COLUMNS, row_generator).
+    The row_generator yields XBRLRow tuples with the zip_url appended to each row.
+    """
     queue: collections.deque[concurrent.futures.Future[tuple[XBRLRow, ...]]] = collections.deque()
     cpu_count = os.cpu_count()
     num_workers = max(cpu_count - 1, 1) if cpu_count else None
@@ -675,30 +681,27 @@ def stream_read_xbrl_sync(
     None,
     None,
 ]:
+    """Yields a stream of parsed XBRL data for files modified after the specified date."""
     def extract_start_end_dates(url: str) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
-        file_basename = os.path.basename(url)
-        file_name_no_ext = os.path.splitext(file_basename)[0]
-
+        file_name_no_ext = pathlib.Path(url).stem
         if "JanToDec" in file_name_no_ext or "JanuaryToDecember" in file_name_no_ext:
-            file_name_no_ext = os.path.splitext(url)[0]
-            year = file_name_no_ext[-4:]
+            year = pathlib.Path(url).stem[-4:]
             return datetime.date(int(year), 1, 1), datetime.date(int(year), 12, 31)
-        elif "Accounts_Monthly_Data" in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
+        if "Accounts_Monthly_Data" in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
             year_int = int(file_name_no_ext[-4:])
             month_name = file_name_no_ext.split("-")[1][:-4]
             # Convert the month name to a month number
-            month_num = datetime.datetime.strptime(month_name, "%B").month
+            month_num = datetime.datetime.strptime(month_name, "%B").astimezone().month
             # Calculate the last date of the month
             first_day_of_month = datetime.date(year_int, month_num, 1)
             next_month = datetime.date(year_int, month_num, 28) + datetime.timedelta(days=4)
             last_day_of_month = next_month - datetime.timedelta(days=next_month.day)
             return (first_day_of_month, last_day_of_month)
-        elif "Accounts_Bulk_Data" in file_name_no_ext:
+        if "Accounts_Bulk_Data" in file_name_no_ext:
             date_str = file_name_no_ext.split("-", 1)[1]
-            day = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+            day = datetime.datetime.strptime(date_str, "%Y-%m-%d").astimezone().date()
             return (day, day)
-        else:
-            return (None, None)
+        return (None, None)
 
     def get_content(client: httpx.Client, url: str) -> bytes:
         r = client.get(url)
@@ -721,13 +724,15 @@ def stream_read_xbrl_sync(
                     r.raise_for_status()
                     if etag is None:
                         etag = r.headers["etag"]
-                    else:
-                        if etag != r.headers["etag"]:
-                            raise Exception("etag has changed since beginning requests")
+                    elif etag != r.headers["etag"]:
+                        error_msg = "etag has changed since beginning requests"
+                        raise RuntimeError(error_msg)
                     if remaining is None:
                         remaining = int(r.headers["content-range"].split("/")[1])
                     content_length = int(r.headers["content-length"])
-                    assert content_length > 0
+                    if not content_length > 0:
+                        error_msg = "content_length is <= 0"
+                        raise ValueError(error_msg)
                     remaining -= content_length
                     yield from r.iter_bytes(chunk_size=65536)
                 start += chunk_size
@@ -740,11 +745,6 @@ def stream_read_xbrl_sync(
             # This is for the case of unfinished iteration. It raises a GeneratorExit in get_chunks, so any
             # open context in "get_chunks" gets properly closed, i.e. to close its open HTTP connection
             chunks.close()
-
-    dummy_list_to_ingest = [
-        (datetime.date(2021, 5, 2), (("1", "2"), ("3", "4"))),
-        (datetime.date(2022, 2, 8), (("5", "6"), ("7", "8"))),
-    ]
 
     with get_client() as client:
         pages_of_links = [
@@ -781,15 +781,17 @@ def stream_read_xbrl_sync(
             tuple[tuple[datetime.date, datetime.date], typing.Generator[XBRLRow, None, None]], None, None
         ]:
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
-                with get_content_streamed(client, zip_url) as chunks:
-                    with stream_read_xbrl_zip(chunks, zip_url=zip_url) as (_, rows):
-                        yield (start_date, end_date), rows
+                with get_content_streamed(client, zip_url) as chunks, stream_read_xbrl_zip(chunks, zip_url=zip_url) as (
+                    _,
+                    rows,
+                ):
+                    yield (start_date, end_date), rows
 
         yield (_COLUMNS, _final_date_and_rows())
 
 
 def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name: str, key_prefix: str) -> None:
-
+    """Synchronizes XBRL data to an S3 bucket as CSV files."""
     def _to_file_like_obj(iterable: typing.Generator[bytes, None, None]) -> typing.BinaryIO:
         chunk = b""
         offset: int = 0
@@ -812,10 +814,12 @@ def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name:
                 yield chunk[offset - to_yield : offset]
 
         class FileLikeObj(io.IOBase):
-            def readable(self) -> bool:
+            @staticmethod
+            def readable() -> bool:
                 return True
 
-            def read(self, size: float = -1) -> bytes:
+            @staticmethod
+            def read(size: float = -1) -> bytes:
                 return b"".join(up_to_iter(float("inf") if size is None or size < 0 else size))
 
         return typing.cast("typing.BinaryIO", FileLikeObj())
@@ -824,7 +828,8 @@ def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name:
         columns: tuple[str, ...], rows: typing.Generator[XBRLRow, None, None]
     ) -> typing.Generator[bytes, None, None]:
         class PseudoBuffer:
-            def write(self, value: str) -> bytes:
+            @staticmethod
+            def write(value: str) -> bytes:
                 return value.encode("utf-8")
 
         pseudo_buffer = PseudoBuffer()
@@ -853,6 +858,7 @@ def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name:
 def stream_read_xbrl_debug(
     zip_url: str, run_code: str, company_id: str, date: datetime.date, debug_cache_folder: str = ".debug-cache"
 ) -> None:
+    """Debug function that extracts a specific XBRL file from a ZIP archive and prints info."""
     pathlib.Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
 
     # Hashing so we have a filesystem-safe URL
@@ -886,22 +892,20 @@ def stream_read_xbrl_debug(
     print("Searching ZIP for member file matching", run_code, company_id, date, file=sys.stderr)
     found = False
     for name, _, chunks in stream_unzip(local_chunks()):
-        fn = os.path.basename(name.decode("utf-8"))
+        fn = pathlib.Path(name.decode("utf-8")).name
         mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)", fn)
         if not mo:
-            logging.warning("Invalid file. Skipping: %s", fn)
+            logger.warning("Invalid file. Skipping: %s", fn)
             break
-        _run_code, _company_id, _date, _ = mo.groups()
-        # print(_run_code, _company_id, _date)
+        run_code_, company_id_, date_, _ = mo.groups()
 
-        if _run_code == run_code and _company_id == company_id and _date == date.isoformat().replace("-", ""):
+        if run_code_ == run_code and company_id_ == company_id and date_ == date.isoformat().replace("-", ""):
             print("Found matching file", name, file=sys.stderr)
             found = True
             for chunk in chunks:
                 sys.stdout.buffer.write(chunk)
         else:
-            for chunk in chunks:
-                pass
+            collections.deque(chunks, maxlen=0)
 
     if not found:
         print("No matching member file found", file=sys.stderr)
