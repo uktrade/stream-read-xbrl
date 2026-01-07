@@ -691,7 +691,7 @@ def test_stream_read_xbrl_zip() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        assert tuple((dict(zip(columns, row)) for row in rows)) == get_expected_data(None)
+        assert tuple(dict(zip(columns, row)) for row in rows) == get_expected_data(None)
 
 
 @pytest.mark.usefixtures("mock_companies_house_invalid_inner_zip")
@@ -699,7 +699,7 @@ def test_skip_invalid_files() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        assert tuple((dict(zip(columns, row)) for row in rows)) != get_expected_data(None)
+        assert tuple(dict(zip(columns, row)) for row in rows) != get_expected_data(None)
 
 
 @pytest.mark.usefixtures(
@@ -714,10 +714,7 @@ def test_skip_invalid_files() -> None:
 def test_stream_read_xbrl_sync() -> None:
     with stream_read_xbrl_sync() as (columns, date_range_and_rows):
         assert tuple(
-            (
-                (date_range, tuple((dict(zip(columns, row)) for row in rows)))
-                for (date_range, rows) in date_range_and_rows
-            )
+            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
         ) == (
             (
                 (date(2008, 1, 1), date(2008, 12, 31)),
@@ -741,10 +738,7 @@ def test_stream_read_xbrl_sync() -> None:
 
     with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, date_range_and_rows):
         assert tuple(
-            (
-                (date_range, tuple((dict(zip(columns, row)) for row in rows)))
-                for (date_range, rows) in date_range_and_rows
-            )
+            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
         ) == (
             (
                 (date(2022, 7, 1), date(2022, 7, 31)),
@@ -758,10 +752,7 @@ def test_stream_read_xbrl_sync() -> None:
 
     with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, date_range_and_rows):
         assert tuple(
-            (
-                (date_range, tuple((dict(zip(columns, row)) for row in rows)))
-                for (date_range, rows) in date_range_and_rows
-            )
+            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
         ) == (
             (
                 (date(2023, 3, 2), date(2023, 3, 2)),
@@ -887,13 +878,13 @@ def test_debug() -> None:
 
 
 def test_entity_current_legal_name_in_span() -> None:
-    html = """
+    html = b"""
         <html>
         <ix:nonnumeric name="c:EntityCurrentLegalOrRegisteredName" xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
             <span>The name</span>
         </ix:nonnumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -910,7 +901,7 @@ def test_entity_current_legal_name_in_span() -> None:
 
 
 def test_employee_numbers_not_negative() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonfraction
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
@@ -921,7 +912,7 @@ def test_employee_numbers_not_negative() -> None:
                 8
             </ix:nonfraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -938,7 +929,7 @@ def test_employee_numbers_not_negative() -> None:
 
 
 def test_employee_numbers_numdotcomma() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonfraction
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
@@ -947,7 +938,7 @@ def test_employee_numbers_numdotcomma() -> None:
                 8.00
             </ix:nonfraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -964,7 +955,7 @@ def test_employee_numbers_numdotcomma() -> None:
 
 
 def test_date_in_format() -> None:
-    html_1 = """
+    html_1 = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyear"
@@ -973,9 +964,9 @@ def test_date_in_format() -> None:
                 10.2.23
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
-    html_2 = """
+    html_2 = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:dateslasheu"
@@ -984,9 +975,9 @@ def test_date_in_format() -> None:
                 10/2/23
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
-    html_3 = """
+    html_3 = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedoteu"
@@ -995,7 +986,7 @@ def test_date_in_format() -> None:
                 10.2.23
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     base_file = (
         "Prod223_3383_00001346_20220930.html",
@@ -1019,7 +1010,7 @@ def test_date_in_format() -> None:
 
 
 def test_split_date() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 name="ns11:BalanceSheetDate"
@@ -1027,7 +1018,7 @@ def test_split_date() -> None:
                 10 February 202<j>0</j>
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1044,7 +1035,7 @@ def test_split_date() -> None:
 
 
 def test_date_with_whitespace() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1053,7 +1044,7 @@ def test_date_with_whitespace() -> None:
                 10 Februar y 2020
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1070,7 +1061,7 @@ def test_date_with_whitespace() -> None:
 
 
 def test_date_with_exclude() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt:datelonguk"
@@ -1079,7 +1070,7 @@ def test_date_with_exclude() -> None:
                 <ix:exclude> 31 July 2017</ix:exclude><span style="display:none">31 July 2017</span>
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1096,7 +1087,7 @@ def test_date_with_exclude() -> None:
 
 
 def test_date_with_incorrect_spelling() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1105,7 +1096,7 @@ def test_date_with_incorrect_spelling() -> None:
                 31 Janaury 2017
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1122,7 +1113,7 @@ def test_date_with_incorrect_spelling() -> None:
 
 
 def test_date_with_suffix() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1131,7 +1122,7 @@ def test_date_with_suffix() -> None:
                 31st March 2017
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1148,7 +1139,7 @@ def test_date_with_suffix() -> None:
 
 
 def test_date_with_capitalised_suffix() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1157,7 +1148,7 @@ def test_date_with_capitalised_suffix() -> None:
                 31ST March 2017
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1174,7 +1165,7 @@ def test_date_with_capitalised_suffix() -> None:
 
 
 def test_parsing_error_captured_in_error_column() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:nonNumeric
                 format="ixt2:datedaymonthyearen"
@@ -1183,7 +1174,7 @@ def test_parsing_error_captured_in_error_column() -> None:
                 31 ABCDEF 2018
             </ix:nonNumeric>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1200,7 +1191,7 @@ def test_parsing_error_captured_in_error_column() -> None:
 
 
 def test_multi_valued_cell() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
                 <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="FY31032024A">
@@ -1222,7 +1213,7 @@ def test_multi_valued_cell() -> None:
                 228,726 750,000
             </ix:nonfraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
@@ -1239,7 +1230,7 @@ def test_multi_valued_cell() -> None:
 
 
 def test_parsing_decimal_emdash() -> None:
-    html = """
+    html = b"""
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
                 <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="c-1">
@@ -1262,7 +1253,7 @@ def test_parsing_decimal_emdash() -> None:
                 &#8212;
             </ix:nonFraction>
         </html>
-    """.encode()
+    """
 
     member_files = (
         (
