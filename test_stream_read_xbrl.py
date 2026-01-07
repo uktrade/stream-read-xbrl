@@ -630,7 +630,7 @@ def mock_companies_house_historic_zip_2009(httpx_mock: pytest_httpx.HTTPXMock) -
 
 @pytest.fixture
 def mock_companies_house_daily_zip_404(httpx_mock: pytest_httpx.HTTPXMock) -> None:
-    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb"):
         httpx_mock.add_response(
             url="https://download.companieshouse.gov.uk/does-not-exist.zip",
             status_code=404,
@@ -699,7 +699,7 @@ def test_skip_invalid_files() -> None:
     with httpx.stream(
         "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
     ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        x = tuple((dict(zip(columns, row)) for row in rows))
+        assert tuple((dict(zip(columns, row)) for row in rows)) != get_expected_data(None)
 
 
 @pytest.mark.usefixtures(

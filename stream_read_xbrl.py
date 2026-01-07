@@ -742,11 +742,6 @@ def stream_read_xbrl_sync(
             # open context in "get_chunks" gets properly closed, i.e. to close its open HTTP connection
             chunks.close()
 
-    dummy_list_to_ingest = [
-        (datetime.date(2021, 5, 2), (("1", "2"), ("3", "4"))),
-        (datetime.date(2022, 2, 8), (("5", "6"), ("7", "8"))),
-    ]
-
     with get_client() as client:
         pages_of_links = [
             (data_url, BeautifulSoup(get_content(client, data_url), "html.parser").find_all("a"))
