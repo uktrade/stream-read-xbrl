@@ -564,7 +564,7 @@ expected_data = (
 BASE_DIR = pathlib.Path(__file__).resolve().parent
 
 
-def get_expected_data(zip_url: pathlib.Path | None) -> tuple[dict[str, typing.Any], ...]:
+def get_expected_data(zip_url: str | None) -> tuple[dict[str, typing.Any], ...]:
     return tuple({**row, "zip_url": zip_url} for row in expected_data)
 
 
@@ -781,7 +781,7 @@ def test_stream_read_xbrl_sync() -> None:
 )
 @mock_aws
 def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty() -> None:
-    region_name = "eu-west-2"
+    region_name: typing.Final = "eu-west-2"
     bucket_name = "my-bucket"
     key_prefix = "my-prefix/"  # Would usually end in a forward slash
 
@@ -834,7 +834,7 @@ def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty() -> Non
 )
 @mock_aws
 def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone() -> None:
-    region_name = "eu-west-2"
+    region_name: typing.Final = "eu-west-2"
     bucket_name = "my-bucket"
     key_prefix = "my-prefix/"  # Would usually end in a forward slash
 
