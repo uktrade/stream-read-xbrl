@@ -478,7 +478,7 @@ def _xbrl_to_rows(
         for period in typing.cast("list[Element]", e.xpath("./*[local-name()='period']"))[:1]
     }
 
-    fn = os.path.basename(name)
+    fn = pathlib.Path(name).name
     # Some April 2021 data files end in .zip, but seem to really be html
     mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml|zip)", fn)
     if not mo:
@@ -680,12 +680,9 @@ def stream_read_xbrl_sync(
     None,
 ]:
     def extract_start_end_dates(url: str) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
-        file_basename = os.path.basename(url)
-        file_name_no_ext = os.path.splitext(file_basename)[0]
-
+        file_name_no_ext = pathlib.Path(url).stem
         if "JanToDec" in file_name_no_ext or "JanuaryToDecember" in file_name_no_ext:
-            file_name_no_ext = os.path.splitext(url)[0]
-            year = file_name_no_ext[-4:]
+            year = pathlib.Path(url).stem[-4:]
             return datetime.date(int(year), 1, 1), datetime.date(int(year), 12, 31)
         elif "Accounts_Monthly_Data" in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
             year_int = int(file_name_no_ext[-4:])
@@ -887,7 +884,7 @@ def stream_read_xbrl_debug(
     print("Searching ZIP for member file matching", run_code, company_id, date, file=sys.stderr)
     found = False
     for name, _, chunks in stream_unzip(local_chunks()):
-        fn = os.path.basename(name.decode("utf-8"))
+        fn = pathlib.Path(name.decode("utf-8")).name
         mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)", fn)
         if not mo:
             logging.warning("Invalid file. Skipping: %s", fn)
