@@ -1,7 +1,8 @@
 import csv
+import pathlib
 import re
 import tempfile
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
 
 import boto3
@@ -11,10 +12,10 @@ from moto import mock_aws
 from stream_zip import ZIP_32, stream_zip
 
 from stream_read_xbrl import (
-    stream_read_xbrl_zip,
+    stream_read_xbrl_debug,
     stream_read_xbrl_sync,
     stream_read_xbrl_sync_s3_csv,
-    stream_read_xbrl_debug,
+    stream_read_xbrl_zip,
 )
 
 expected_data = ({
@@ -539,6 +540,9 @@ expected_data = ({
     'zip_url': None,
 })
 
+BASE_DIR = pathlib.Path(__file__).resolve().parent
+
+
 def get_expected_data(zip_url):
     return tuple(
         {**row, 'zip_url': zip_url}
@@ -548,7 +552,7 @@ def get_expected_data(zip_url):
 
 @pytest.fixture
 def mock_companies_house_daily_zip(httpx_mock):
-    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip',
@@ -563,7 +567,7 @@ def mock_companies_house_daily_zip(httpx_mock):
 
 @pytest.fixture
 def mock_companies_house_monthly_zip(httpx_mock):
-    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip',
@@ -578,7 +582,7 @@ def mock_companies_house_monthly_zip(httpx_mock):
 
 @pytest.fixture
 def mock_companies_house_historic_zip_2008(httpx_mock):
-    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip',
@@ -593,7 +597,7 @@ def mock_companies_house_historic_zip_2008(httpx_mock):
 
 @pytest.fixture
 def mock_companies_house_historic_zip_2009(httpx_mock):
-    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip',
@@ -608,7 +612,7 @@ def mock_companies_house_historic_zip_2009(httpx_mock):
 
 @pytest.fixture
 def mock_companies_house_daily_zip_404(httpx_mock):
-    with open('fixtures/Accounts_Bulk_Data-2023-03-02.zip', 'rb') as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/does-not-exist.zip',
             status_code=404,
@@ -647,7 +651,7 @@ def mock_companies_house_historic_html(httpx_mock):
 
 @pytest.fixture
 def mock_companies_house_invalid_inner_zip(httpx_mock):
-    with open('fixtures/Accounts_Bulk_Data-2025-05-03.zip', 'rb') as f:
+    with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2025-05-03.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
             url='https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip',
