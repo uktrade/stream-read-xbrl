@@ -500,12 +500,12 @@ def _xbrl_to_rows(
     )
 
     # Mutable dictionaries to store the "priority" (lower is better) of a found value
-    general_attributes_with_priorities: dict[str, tuple[int, decimal.Decimal | None]] = {
-        name: (10, None) for name in GENERAL_XPATH_MAPPINGS.keys()
-    }
+    general_attributes_with_priorities: dict[str, tuple[int, decimal.Decimal | None]] = dict.fromkeys(
+        GENERAL_XPATH_MAPPINGS.keys(), (10, None)
+    )
     periodic_attributes_with_priorities: collections.defaultdict[
         typing.Any, dict[str, tuple[int, decimal.Decimal | None]]
-    ] = collections.defaultdict(lambda: {name: (10, None) for name in PERIODICAL_XPATH_MAPPINGS.keys()})
+    ] = collections.defaultdict(lambda: dict.fromkeys(PERIODICAL_XPATH_MAPPINGS.keys(), (10, None)))
 
     def tag_name_tests(
         local_name: str,
