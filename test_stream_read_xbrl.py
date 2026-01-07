@@ -914,8 +914,8 @@ def test_employee_numbers_not_negative() -> None:
         <html>
             <ix:nonfraction
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
-                name="core:AverageNumberEmployeesDuringPeriod" 
-                format="ixt:numdotdecimal" 
+                name="core:AverageNumberEmployeesDuringPeriod"
+                format="ixt:numdotdecimal"
                 decimals="0"
                 sign="-">
                 8
@@ -966,9 +966,9 @@ def test_employee_numbers_numdotcomma() -> None:
 def test_date_in_format() -> None:
     html_1 = """
         <html>
-            <ix:nonNumeric  
-                format="ixt2:datedaymonthyear" 
-                name="ns11:BalanceSheetDate" 
+            <ix:nonNumeric
+                format="ixt2:datedaymonthyear"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 10.2.23
             </ix:nonNumeric>
@@ -977,9 +977,9 @@ def test_date_in_format() -> None:
 
     html_2 = """
         <html>
-            <ix:nonNumeric  
-                format="ixt2:dateslasheu" 
-                name="ns11:BalanceSheetDate" 
+            <ix:nonNumeric
+                format="ixt2:dateslasheu"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 10/2/23
             </ix:nonNumeric>
@@ -988,9 +988,9 @@ def test_date_in_format() -> None:
 
     html_3 = """
         <html>
-            <ix:nonNumeric  
-                format="ixt2:datedoteu" 
-                name="ns11:BalanceSheetDate" 
+            <ix:nonNumeric
+                format="ixt2:datedoteu"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 10.2.23
             </ix:nonNumeric>
@@ -1021,8 +1021,8 @@ def test_date_in_format() -> None:
 def test_split_date() -> None:
     html = """
         <html>
-            <ix:nonNumeric  
-                name="ns11:BalanceSheetDate" 
+            <ix:nonNumeric
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 10 February 202<j>0</j>
             </ix:nonNumeric>
@@ -1047,8 +1047,8 @@ def test_date_with_whitespace() -> None:
     html = """
         <html>
             <ix:nonNumeric
-                format="ixt2:datedaymonthyearen"  
-                name="ns11:BalanceSheetDate" 
+                format="ixt2:datedaymonthyearen"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 10 Februar y 2020
             </ix:nonNumeric>
@@ -1073,8 +1073,8 @@ def test_date_with_exclude() -> None:
     html = """
         <html>
             <ix:nonNumeric
-                format="ixt:datelonguk"  
-                name="ns11:BalanceSheetDate" 
+                format="ixt:datelonguk"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 <ix:exclude> 31 July 2017</ix:exclude><span style="display:none">31 July 2017</span>
             </ix:nonNumeric>
@@ -1099,8 +1099,8 @@ def test_date_with_incorrect_spelling() -> None:
     html = """
         <html>
             <ix:nonNumeric
-                format="ixt2:datedaymonthyearen"  
-                name="ns11:BalanceSheetDate" 
+                format="ixt2:datedaymonthyearen"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 31 Janaury 2017
             </ix:nonNumeric>
@@ -1125,8 +1125,8 @@ def test_date_with_suffix() -> None:
     html = """
         <html>
             <ix:nonNumeric
-                format="ixt2:datedaymonthyearen"  
-                name="ns11:BalanceSheetDate" 
+                format="ixt2:datedaymonthyearen"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 31st March 2017
             </ix:nonNumeric>
@@ -1151,8 +1151,8 @@ def test_date_with_capitalised_suffix() -> None:
     html = """
         <html>
             <ix:nonNumeric
-                format="ixt2:datedaymonthyearen"  
-                name="ns11:BalanceSheetDate" 
+                format="ixt2:datedaymonthyearen"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 31ST March 2017
             </ix:nonNumeric>
@@ -1177,8 +1177,8 @@ def test_parsing_error_captured_in_error_column() -> None:
     html = """
         <html>
             <ix:nonNumeric
-                format="ixt2:datedaymonthyearen"  
-                name="ns11:BalanceSheetDate" 
+                format="ixt2:datedaymonthyearen"
+                name="ns11:BalanceSheetDate"
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL">
                 31 ABCDEF 2018
             </ix:nonNumeric>
@@ -1212,14 +1212,14 @@ def test_multi_valued_cell() -> None:
                     </xbrli:period>
                 </xbrli:context>
             </ix:resources>
-            <ix:nonfraction 
-                xmlns:ix="http://www.xbrl.org/2008/inlineXBRL" 
-                contextRef="FY31032024A" 
-                decimals="0" 
-                format="ixt2:numdotdecimal" 
-                name="core:CashBankOnHand" 
+            <ix:nonfraction
+                xmlns:ix="http://www.xbrl.org/2008/inlineXBRL"
+                contextRef="FY31032024A"
+                decimals="0"
+                format="ixt2:numdotdecimal"
+                name="core:CashBankOnHand"
                 unitRef="GBP">
-                228,726 750,000	
+                228,726 750,000
             </ix:nonfraction>
         </html>
     """.encode()
@@ -1251,13 +1251,13 @@ def test_parsing_decimal_emdash() -> None:
                         <xbrli:endDate>2024-12-31</xbrli:endDate>
                     </xbrli:period>
                 </xbrli:context>
-            </ix:resources> 
-            <ix:nonFraction 
+            </ix:resources>
+            <ix:nonFraction
                 xmlns:ix="http://www.xbrl.org/2013/inlineXBRL"
-                unitRef="u-2" 
-                contextRef="c-1" 
-                decimals="0" 
-                name="core:TurnoverRevenue" 
+                unitRef="u-2"
+                contextRef="c-1"
+                decimals="0"
+                name="core:TurnoverRevenue"
                 format="ixt:zerodash">
                 &#8212;
             </ix:nonFraction>
