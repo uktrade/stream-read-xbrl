@@ -100,7 +100,7 @@ def _xbrl_to_rows(
     ) -> decimal.Decimal | None:
         return parser(element, text.strip()) if text and text.strip() not in {"", "-", "—"} else None
 
-    def _parse_str(element: Element, text: str) -> str:
+    def _parse_str(_element: Element, text: str) -> str:
         return str(text).replace("\n", " ").replace('"', "")
 
     def _parse_absolute(element: Element, text: str) -> decimal.Decimal | None:
@@ -149,10 +149,10 @@ def _xbrl_to_rows(
                 re.sub(r"([a-zA-Z]+)", lambda m: m.group(0)[:3], text), dayfirst=day_first
             ).date()
 
-    def _parse_bool(element: Element, text: str) -> bool | None:
+    def _parse_bool(_element: Element, text: str) -> bool | None:
         return False if text == "false" else True if text == "true" else None
 
-    def _parse_reversed_bool(element: Element, text: str) -> bool | None:
+    def _parse_reversed_bool(_element: Element, text: str) -> bool | None:
         return False if text == "true" else True if text == "false" else None
 
     # Parsing strategy
@@ -173,7 +173,7 @@ def _xbrl_to_rows(
         search: collections.abc.Callable[
             [Element, typing.Any, typing.Any, typing.Any],
             typing.Any,
-        ] = lambda element, local_name, attribute_name, context_ref: (element,)
+        ] = lambda element, _local_name, _attribute_name, _context_ref: (element,)
 
     @dataclass
     class _TN(_TEST):
@@ -208,7 +208,7 @@ def _xbrl_to_rows(
             (
                 _AV(
                     "EntityCurrentLegalOrRegisteredName",
-                    lambda element, local_name, attribute_name, context_ref: chain(
+                    lambda element, _local_name, _attribute_name, _context_ref: chain(
                         (element,),
                         typing.cast("list[Element]", element.xpath("./*[local-name()='span'][1]")),
                     ),
@@ -218,7 +218,7 @@ def _xbrl_to_rows(
             (
                 _TN(
                     "EntityCurrentLegalName",
-                    lambda element, local_name, attribute_name, context_ref: chain(
+                    lambda element, _local_name, _attribute_name, _context_ref: chain(
                         (element,),
                         typing.cast("list[Element]", element.xpath("./*[local-name()='span'][1]")),
                     ),
@@ -272,7 +272,7 @@ def _xbrl_to_rows(
             (
                 _AV(
                     "Creditors",
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, _attribute_name, _context_ref: (
                         (element,) if "WithinOneYear" in element.get("contextRef", "") else ()
                     ),
                 ),
@@ -284,7 +284,7 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, local_name, _attribute_name, context_ref: (
                         (element,) if "Creditors" == local_name and "AfterOneYear" in context_ref else ()
                     ),
                 ),
@@ -311,7 +311,7 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, attribute_name, _context_ref: (
                         (element,)
                         if "Equity" == attribute_name and "ShareCapital" in element.get("contextRef", "")
                         else ()
@@ -326,7 +326,7 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, attribute_name, _context_ref: (
                         (element,)
                         if "Equity" == attribute_name
                         and "RetainedEarningsAccumulatedLosses" in element.get("contextRef", "")
@@ -342,7 +342,7 @@ def _xbrl_to_rows(
             (
                 _CUSTOM(
                     None,
-                    lambda element, local_name, attribute_name, context_ref: (
+                    lambda element, _local_name, attribute_name, context_ref: (
                         (element,) if "Equity" == attribute_name and "segment" not in context_ref else ()
                     ),
                 ),
