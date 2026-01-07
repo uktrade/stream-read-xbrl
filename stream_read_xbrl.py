@@ -420,25 +420,25 @@ def _xbrl_to_rows(
         ]),
     }
 
-    ALL_MAPPINGS = dict(**GENERAL_XPATH_MAPPINGS, **PERIODICAL_XPATH_MAPPINGS)
+    all_mappings = dict(**GENERAL_XPATH_MAPPINGS, **PERIODICAL_XPATH_MAPPINGS)
 
-    TAG_NAME_TESTS = {
+    tag_name_test_dict = {
         test.name: (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
         if isinstance(test, _TN)
     }
 
-    ATTRIBUTE_VALUE_TESTS = {
+    attribute_value_test_dict = {
         test.name: (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
         if isinstance(test, _AV)
     }
 
-    CUSTOM_TESTS = tuple(
+    custom_tests = tuple(
         (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
         if isinstance(test, _CUSTOM)
     )
@@ -511,7 +511,7 @@ def _xbrl_to_rows(
         local_name: str,
     ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]]]:
         try:
-            yield from (TAG_NAME_TESTS[local_name],)
+            yield from (tag_name_test_dict[local_name],)
         except KeyError:
             pass
 
@@ -519,7 +519,7 @@ def _xbrl_to_rows(
         attribute_value: str,
     ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]]]:
         try:
-            yield from (ATTRIBUTE_VALUE_TESTS[attribute_value],)
+            yield from (attribute_value_test_dict[attribute_value],)
         except KeyError:
             pass
 
@@ -581,7 +581,7 @@ def _xbrl_to_rows(
             context_ref = element.get("contextRef", "")
 
             for name, priority, test, parse in chain(
-                tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS
+                tag_name_tests(local_name), attribute_value_tests(attribute_value), custom_tests
             ):
                 handler = handle_general if name in general_attributes_with_priorities else handle_periodic
 

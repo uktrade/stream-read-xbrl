@@ -17,6 +17,9 @@ ignore = ["COM812", "CPY001", "T201", "S404", "S603", "S607", "PLR0913", "PLR091
 [tool.ruff.lint.per-file-ignores]
 "test_stream_read_xbrl.py" = ["D1", "S101"]
 
+[tool.ruff.lint.pep8-naming]
+ignore-names = ["GENERAL_XPATH_MAPPINGS", "PERIODICAL_XPATH_MAPPINGS"]
+
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
