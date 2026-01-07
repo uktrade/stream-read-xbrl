@@ -136,9 +136,9 @@ def _xbrl_to_rows(
         return _parse(element, re.sub(r"(.*:)|(.+- )", "", text), _parse_decimal)
 
     def _parse_date(element: Element, text: str) -> datetime.date:
-        format = element.get("format", "").rpartition(":")[2].lower()
-        day_first = format in {"datedaymonthyear", "dateslasheu", "datedoteu"}
-        if format == "datedaymonthyearen":
+        date_format = element.get("format", "").rpartition(":")[2].lower()
+        day_first = date_format in {"datedaymonthyear", "dateslasheu", "datedoteu"}
+        if date_format == "datedaymonthyearen":
             text = text.replace(" ", "")
         text = re.sub(r"(?i)(\d)((st)|(nd)|(rd)|(th))", r"\1", text)
         try:
