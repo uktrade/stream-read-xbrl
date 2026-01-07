@@ -26,6 +26,7 @@ import httpx
 import lxml.etree
 from bs4 import BeautifulSoup
 from stream_unzip import stream_unzip
+import operator
 
 if typing.TYPE_CHECKING:
     import mypy_boto3_s3
@@ -595,7 +596,7 @@ def _xbrl_to_rows(
             + tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS.keys())
             for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
         )
-        sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
+        sorted_periods = sorted(periods, key=operator.itemgetter(0, 1), reverse=True)
     except ValueError as e:
         error = str(e)
         return (
