@@ -533,7 +533,7 @@ def _xbrl_to_rows(
         test: _TEST,
         parse: collections.abc.Callable[[Element, str], typing.Any],
     ) -> None:
-        best_priority, best_value = general_attributes_with_priorities[name]
+        best_priority, _best_value = general_attributes_with_priorities[name]
 
         if priority > best_priority:
             return
@@ -562,7 +562,7 @@ def _xbrl_to_rows(
             return
 
         for element in test.search(element, local_name, attribute_value, context_ref):
-            best_priority, best_value = periodic_attributes_with_priorities[dates][name]
+            best_priority, _best_value = periodic_attributes_with_priorities[dates][name]
 
             if priority >= best_priority:
                 return
@@ -592,8 +592,11 @@ def _xbrl_to_rows(
         )
 
         periods = tuple(
-            (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
-            + tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS.keys())
+            (
+                datetime.date.fromisoformat(period_start_end[0]),
+                datetime.date.fromisoformat(period_start_end[1]),
+                *tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS.keys()),
+            )
             for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
         )
         sorted_periods = sorted(periods, key=operator.itemgetter(0, 1), reverse=True)
@@ -887,10 +890,10 @@ def stream_read_xbrl_debug(
         if not mo:
             logging.warning("Invalid file. Skipping: %s", fn)
             break
-        _run_code, _company_id, _date, _ = mo.groups()
+        run_code_, company_id_, date_, _ = mo.groups()
         # print(_run_code, _company_id, _date)
 
-        if _run_code == run_code and _company_id == company_id and _date == date.isoformat().replace("-", ""):
+        if run_code_ == run_code and company_id_ == company_id and date_ == date.isoformat().replace("-", ""):
             print("Found matching file", name, file=sys.stderr)
             found = True
             for chunk in chunks:

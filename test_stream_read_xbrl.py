@@ -896,7 +896,7 @@ def test_entity_current_legal_name_in_span() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["entity_current_legal_name"] == "The name"
 
 
@@ -924,7 +924,7 @@ def test_employee_numbers_not_negative() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["average_number_employees_during_period"] == 8
 
 
@@ -950,7 +950,7 @@ def test_employee_numbers_numdotcomma() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["average_number_employees_during_period"] == 800
 
 
@@ -996,9 +996,9 @@ def test_date_in_format() -> None:
     )
 
     member_files = (
-        base_file + ((html_1,),),
-        base_file + ((html_2,),),
-        base_file + ((html_3,),),
+        (*base_file, (html_1,)),
+        (*base_file, (html_2,)),
+        (*base_file, (html_3,)),
     )
 
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
@@ -1030,7 +1030,7 @@ def test_split_date() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
@@ -1056,7 +1056,7 @@ def test_date_with_whitespace() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
@@ -1082,7 +1082,7 @@ def test_date_with_exclude() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-07-31")
 
 
@@ -1108,7 +1108,7 @@ def test_date_with_incorrect_spelling() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-01-31")
 
 
@@ -1134,7 +1134,7 @@ def test_date_with_suffix() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
 
@@ -1160,7 +1160,7 @@ def test_date_with_capitalised_suffix() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
 
@@ -1186,7 +1186,7 @@ def test_parsing_error_captured_in_error_column() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["error"] == "Unknown string format: 31ABC2018"
 
 
@@ -1225,7 +1225,7 @@ def test_multi_valued_cell() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["cash_bank_in_hand"] == 978726, dict(zip(columns, row))["cash_bank_in_hand"]
 
 
@@ -1265,5 +1265,5 @@ def test_parsing_decimal_emdash() -> None:
         ),
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        row = list(rows)[0]
+        row = next(iter(rows))
         assert dict(zip(columns, row))["turnover_gross_operating_revenue"] == None
