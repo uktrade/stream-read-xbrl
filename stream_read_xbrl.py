@@ -688,7 +688,7 @@ def stream_read_xbrl_sync(
             year_int = int(file_name_no_ext[-4:])
             month_name = file_name_no_ext.split("-")[1][:-4]
             # Convert the month name to a month number
-            month_num = datetime.datetime.strptime(month_name, "%B").month
+            month_num = datetime.datetime.strptime(month_name, "%B").astimezone().month
             # Calculate the last date of the month
             first_day_of_month = datetime.date(year_int, month_num, 1)
             next_month = datetime.date(year_int, month_num, 28) + datetime.timedelta(days=4)
@@ -696,7 +696,7 @@ def stream_read_xbrl_sync(
             return (first_day_of_month, last_day_of_month)
         elif "Accounts_Bulk_Data" in file_name_no_ext:
             date_str = file_name_no_ext.split("-", 1)[1]
-            day = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+            day = datetime.datetime.strptime(date_str, "%Y-%m-%d").astimezone().date()
             return (day, day)
         else:
             return (None, None)

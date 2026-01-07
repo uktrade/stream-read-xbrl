@@ -889,7 +889,7 @@ def test_entity_current_legal_name_in_span() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -917,7 +917,7 @@ def test_employee_numbers_not_negative() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -943,7 +943,7 @@ def test_employee_numbers_numdotcomma() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -990,7 +990,7 @@ def test_date_in_format() -> None:
 
     base_file = (
         "Prod223_3383_00001346_20220930.html",
-        datetime.now(),
+        datetime.now().astimezone(),
         0o600,
         ZIP_32,
     )
@@ -1023,7 +1023,7 @@ def test_split_date() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1049,7 +1049,7 @@ def test_date_with_whitespace() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1075,7 +1075,7 @@ def test_date_with_exclude() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1101,7 +1101,7 @@ def test_date_with_incorrect_spelling() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1127,7 +1127,7 @@ def test_date_with_suffix() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1153,7 +1153,7 @@ def test_date_with_capitalised_suffix() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1179,7 +1179,7 @@ def test_parsing_error_captured_in_error_column() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1218,7 +1218,7 @@ def test_multi_valued_cell() -> None:
     member_files = (
         (
             "Prod223_3383_00001346_20220930.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
@@ -1258,7 +1258,7 @@ def test_parsing_decimal_emdash() -> None:
     member_files = (
         (
             "Prod223_4046_01849064_20241231.html",
-            datetime.now(),
+            datetime.now().astimezone(),
             0o600,
             ZIP_32,
             (html,),
