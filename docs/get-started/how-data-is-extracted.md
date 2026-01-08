@@ -1,5 +1,8 @@
 ---
 layout: sub-navigation
+sectionKey: Get started
+eleventyNavigation:
+    parent: Get started
 order: 3
 title: How data is extracted
 ---

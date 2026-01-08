@@ -1,6 +1,8 @@
 import { govukEleventyPlugin } from '@x-govuk/govuk-eleventy-plugin'
 import fs from 'fs';
 
+var serviceName = 'stream-read-xbrl'
+
 export default function(eleventyConfig) {
   // Register the plugin
   eleventyConfig.addPlugin(govukEleventyPlugin, {
@@ -10,8 +12,22 @@ export default function(eleventyConfig) {
     header: {
       logotype: {
         html: fs.readFileSync('./docs/assets/dit-logo.svg', {encoding: 'utf8'})
-      },
-      productName: 'stream-read-xbrl',
+      }
+    },
+    showBreadcrumbs: false,
+    serviceNavigation: {
+      serviceName,
+      serviceUrl: '/',
+      navigation: [
+        {
+          text: 'Get started',
+          href: '/get-started/'
+        },
+        {
+          text: 'Contributing',
+          href: '/contributing/'
+        }
+      ]
     },
     footer: {
       meta: {

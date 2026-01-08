@@ -1,7 +1,8 @@
 ---
 layout: sub-navigation
+sectionKey: Get started
 order: 1
-title: Getting started
+title: Get started
 ---
 
 ## Prerequisites
