@@ -1,4 +1,4 @@
-name: Tests
+name: Test and Bench
 
 on:
   pull_request:
@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v4
         with:
           python-version: '${{ matrix.python-version }}'
@@ -44,4 +46,71 @@ jobs:
       - name: Type check with mypy
         run:  python -m mypy .
       - name: Test with pytest
-        run:  python -m pytest
+        run:  python -m pytest --benchmark-skip
+
+  bench:
+    name: Compare benchmark performance
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr-branch
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-branch
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          pip install -e "./pr-branch[dev]"
+          touch history.json
+      - name: Benchmark PR
+        run: |
+          cd pr-branch
+          export PY_IGNORE_IMPORTMISMATCH=1
+          python -m pytest --benchmark-enable --benchmark-only --benchmark-json ../pr.json
+      - name: Benchmark main
+        run: |
+          PACKAGE_FILE=$(python -c "import stream_read_xbrl; import os; print(os.path.dirname(stream_read_xbrl.__file__))")
+          cp ./main-branch/stream_read_xbrl.py "$PACKAGE_FILE"
+          export PY_IGNORE_IMPORTMISMATCH=1
+          python -m pytest pr-branch/test_stream_read_xbrl.py --import-mode=append --benchmark-enable --benchmark-only --benchmark-json main.json
+
+      - name: Download previous main benchmark
+        uses: actions/cache@v4
+        with:
+          path: ./cache
+          key: main-benchmark
+      - name: Store main benchmark
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: main.json
+          external-data-json-path: ./cache/benchmark-data.json
+          save-data-file: true
+          fail-on-alert: false
+          skip-fetch-gh-pages: true
+      - name: Compare benchmarks
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: pr.json
+          external-data-json-path: ./cache/benchmark-data.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          alert-threshold: '120%'
+          fail-on-alert: false
+          comment-always: true
+          summary-always: true
+          save-data-file: false
+          skip-fetch-gh-pages: true
