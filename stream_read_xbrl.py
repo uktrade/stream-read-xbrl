@@ -680,7 +680,7 @@ def stream_read_xbrl_sync(
         if "JanToDec" in file_name_no_ext or "JanuaryToDecember" in file_name_no_ext:
             year = pathlib.Path(url).stem[-4:]
             return datetime.date(int(year), 1, 1), datetime.date(int(year), 12, 31)
-        elif "Accounts_Monthly_Data" in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
+        if "Accounts_Monthly_Data" in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
             year_int = int(file_name_no_ext[-4:])
             month_name = file_name_no_ext.split("-")[1][:-4]
             # Convert the month name to a month number
@@ -690,12 +690,11 @@ def stream_read_xbrl_sync(
             next_month = datetime.date(year_int, month_num, 28) + datetime.timedelta(days=4)
             last_day_of_month = next_month - datetime.timedelta(days=next_month.day)
             return (first_day_of_month, last_day_of_month)
-        elif "Accounts_Bulk_Data" in file_name_no_ext:
+        if "Accounts_Bulk_Data" in file_name_no_ext:
             date_str = file_name_no_ext.split("-", 1)[1]
             day = datetime.datetime.strptime(date_str, "%Y-%m-%d").astimezone().date()
             return (day, day)
-        else:
-            return (None, None)
+        return (None, None)
 
     def get_content(client: httpx.Client, url: str) -> bytes:
         r = client.get(url)
