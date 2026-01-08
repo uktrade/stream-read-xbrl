@@ -11,6 +11,7 @@ import decimal
 import hashlib
 import io
 import logging
+import operator
 import os
 import pathlib
 import re
@@ -26,7 +27,6 @@ import httpx
 import lxml.etree
 from bs4 import BeautifulSoup
 from stream_unzip import stream_unzip
-import operator
 
 if typing.TYPE_CHECKING:
     import mypy_boto3_s3
@@ -618,6 +618,12 @@ def stream_read_xbrl_zip(
     None,
     None,
 ]:
+    """Streams and parses XBRL files from a ZIP byte-stream.
+
+    Yields:
+    A tuple of (_COLUMNS, row_generator).
+    The row_generator yields XBRLRow tuples with the zip_url appended to each row.
+    """
     queue: collections.deque[concurrent.futures.Future[tuple[XBRLRow, ...]]] = collections.deque()
     cpu_count = os.cpu_count()
     num_workers = max(cpu_count - 1, 1) if cpu_count else None
@@ -675,6 +681,7 @@ def stream_read_xbrl_sync(
     None,
     None,
 ]:
+    """Yields a stream of parsed XBRL data for files modified after the specified date."""
     def extract_start_end_dates(url: str) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
         file_name_no_ext = pathlib.Path(url).stem
         if "JanToDec" in file_name_no_ext or "JanuaryToDecember" in file_name_no_ext:
@@ -784,7 +791,7 @@ def stream_read_xbrl_sync(
 
 
 def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name: str, key_prefix: str) -> None:
-
+    """Synchronizes XBRL data to an S3 bucket as CSV files."""
     def _to_file_like_obj(iterable: typing.Generator[bytes, None, None]) -> typing.BinaryIO:
         chunk = b""
         offset: int = 0
@@ -851,6 +858,7 @@ def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name:
 def stream_read_xbrl_debug(
     zip_url: str, run_code: str, company_id: str, date: datetime.date, debug_cache_folder: str = ".debug-cache"
 ) -> None:
+    """Debug function that extracts a specific XBRL file from a ZIP archive and prints info."""
     pathlib.Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
 
     # Hashing so we have a filesystem-safe URL
