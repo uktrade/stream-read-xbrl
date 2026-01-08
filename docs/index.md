@@ -4,7 +4,7 @@ layout: product
 title: Extract data from Companies House accounts in a streaming way.
 description: Use this Python package to convert the zipped XBRL format that Companies House supplies into a single data frame of 38 columns.
 startButton:
-  href: "getting-started"
+  href: "get-started"
   text: Get started
 ---
 

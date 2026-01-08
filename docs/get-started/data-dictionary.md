@@ -1,5 +1,8 @@
 ---
 layout: sub-navigation
+sectionKey: Get started
+eleventyNavigation:
+    parent: Get started
 order: 2
 title: Data dictionary
 ---

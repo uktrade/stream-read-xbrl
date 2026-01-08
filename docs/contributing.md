@@ -1,5 +1,6 @@
 ---
 layout: sub-navigation
+sectionKey: Contributing
 order: 5
 title: Contributing
 ---
