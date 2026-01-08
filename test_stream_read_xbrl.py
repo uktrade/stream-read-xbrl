@@ -6,7 +6,7 @@ import csv
 import pathlib
 import tempfile
 import typing
-from datetime import date, datetime
+from datetime import MINYEAR, date, datetime
 from decimal import Decimal
 
 import boto3
@@ -23,6 +23,7 @@ from stream_read_xbrl import (
 )
 
 if typing.TYPE_CHECKING:
+    import pytest_benchmark.fixture
     import pytest_httpx
 
 expected_data = (
@@ -569,6 +570,11 @@ def get_expected_data(zip_url: str | None) -> tuple[dict[str, typing.Any], ...]:
 
 
 @pytest.fixture
+def assert_all_responses_were_requested() -> bool:
+    return False
+
+
+@pytest.fixture
 def mock_companies_house_daily_zip(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
@@ -687,19 +693,35 @@ def mock_companies_house_invalid_inner_zip(httpx_mock: pytest_httpx.HTTPXMock) -
 
 
 @pytest.mark.usefixtures("mock_companies_house_daily_zip")
-def test_stream_read_xbrl_zip() -> None:
-    with httpx.stream(
-        "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"
-    ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        assert tuple(dict(zip(columns, row)) for row in rows) == get_expected_data(None)
+@pytest.mark.benchmark(group="TestSteamReadXbrlZip", warmup=True)
+class TestSteamReadXbrlZip:
+    @staticmethod
+    def test_stream_read_xbrl_zip() -> None:
+        with httpx.stream(
+            "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"
+        ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
+            assert tuple(dict(zip(columns, row)) for row in rows) == get_expected_data(None)
+
+    @staticmethod
+    def test_bench_stream_read_xbrl_zip(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        with httpx.stream("GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip") as r:
+            benchmark(stream_read_xbrl_zip, r.iter_bytes(chunk_size=65536))
 
 
 @pytest.mark.usefixtures("mock_companies_house_invalid_inner_zip")
-def test_skip_invalid_files() -> None:
-    with httpx.stream(
-        "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
-    ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
-        assert tuple(dict(zip(columns, row)) for row in rows) != get_expected_data(None)
+@pytest.mark.benchmark(group="TestSkipInvalidFiles", warmup=True)
+class TestSkipInvalidFiles:
+    @staticmethod
+    def test_skip_invalid_files() -> None:
+        with httpx.stream(
+            "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
+        ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
+            assert tuple(dict(zip(columns, row)) for row in rows) != get_expected_data(None)
+
+    @staticmethod
+    def test_bench_skip_invalid_files(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        with httpx.stream("GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip") as r:
+            benchmark(stream_read_xbrl_zip, r.iter_bytes(chunk_size=65536))
 
 
 @pytest.mark.usefixtures(
@@ -711,54 +733,84 @@ def test_skip_invalid_files() -> None:
     "mock_companies_house_historic_zip_2008",
     "mock_companies_house_historic_zip_2009",
 )
-def test_stream_read_xbrl_sync() -> None:
-    with stream_read_xbrl_sync() as (columns, date_range_and_rows):
-        assert tuple(
-            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
-        ) == (
-            (
-                (date(2008, 1, 1), date(2008, 12, 31)),
-                get_expected_data(
-                    "https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip"
+@pytest.mark.benchmark(group="TestStreamReadXbrlSync", warmup=False)
+class TestStreamReadXbrlSync:
+    @staticmethod
+    def test_stream_read_xbrl_sync_default() -> None:
+        with stream_read_xbrl_sync() as (columns, date_range_and_rows):
+            assert tuple(
+                (date_range, tuple(dict(zip(columns, row)) for row in rows))
+                for (date_range, rows) in date_range_and_rows
+            ) == (
+                (
+                    (date(2008, 1, 1), date(2008, 12, 31)),
+                    get_expected_data(
+                        "https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip"
+                    ),
                 ),
-            ),
-            (
-                (date(2009, 1, 1), date(2009, 12, 31)),
-                get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip"),
-            ),
-            (
-                (date(2022, 7, 1), date(2022, 7, 31)),
-                get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip"),
-            ),
-            (
-                (date(2023, 3, 2), date(2023, 3, 2)),
-                get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"),
-            ),
-        )
+                (
+                    (date(2009, 1, 1), date(2009, 12, 31)),
+                    get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip"),
+                ),
+                (
+                    (date(2022, 7, 1), date(2022, 7, 31)),
+                    get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip"),
+                ),
+                (
+                    (date(2023, 3, 2), date(2023, 3, 2)),
+                    get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"),
+                ),
+            )
 
-    with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, date_range_and_rows):
-        assert tuple(
-            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
-        ) == (
-            (
-                (date(2022, 7, 1), date(2022, 7, 31)),
-                get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip"),
-            ),
-            (
-                (date(2023, 3, 2), date(2023, 3, 2)),
-                get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"),
-            ),
-        )
+    @staticmethod
+    def test_stream_read_xbrl_sync_not_end_of_month() -> None:
+        with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, date_range_and_rows):
+            assert tuple(
+                (date_range, tuple(dict(zip(columns, row)) for row in rows))
+                for (date_range, rows) in date_range_and_rows
+            ) == (
+                (
+                    (date(2022, 7, 1), date(2022, 7, 31)),
+                    get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip"),
+                ),
+                (
+                    (date(2023, 3, 2), date(2023, 3, 2)),
+                    get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"),
+                ),
+            )
 
-    with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, date_range_and_rows):
-        assert tuple(
-            (date_range, tuple(dict(zip(columns, row)) for row in rows)) for (date_range, rows) in date_range_and_rows
-        ) == (
-            (
-                (date(2023, 3, 2), date(2023, 3, 2)),
-                get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"),
-            ),
-        )
+    @staticmethod
+    def test_stream_read_xbrl_sync_end_of_month() -> None:
+        with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, date_range_and_rows):
+            assert tuple(
+                (date_range, tuple(dict(zip(columns, row)) for row in rows))
+                for (date_range, rows) in date_range_and_rows
+            ) == (
+                (
+                    (date(2023, 3, 2), date(2023, 3, 2)),
+                    get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"),
+                ),
+            )
+
+    @staticmethod
+    def _exhaust_stream(date: date) -> None:
+        """Helper function to run the full stream generation."""
+        with stream_read_xbrl_sync(date) as (_columns, date_range_and_rows):
+            for _date_range, rows in date_range_and_rows:
+                for _row in rows:
+                    pass
+
+    @staticmethod
+    def test_bench_stream_read_xbrl_sync_default(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        benchmark(TestStreamReadXbrlSync._exhaust_stream, date(MINYEAR, 1, 1))
+
+    @staticmethod
+    def test_bench_stream_read_xbrl_sync_not_end_of_month(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        benchmark(TestStreamReadXbrlSync._exhaust_stream, date(2022, 7, 30))
+
+    @staticmethod
+    def test_bench_stream_read_xbrl_sync_end_of_month(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        benchmark(TestStreamReadXbrlSync._exhaust_stream, date(2022, 7, 31))
 
 
 @pytest.mark.usefixtures(
@@ -770,111 +822,139 @@ def test_stream_read_xbrl_sync() -> None:
     "mock_companies_house_historic_zip_2008",
     "mock_companies_house_historic_zip_2009",
 )
-@mock_aws
-def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty() -> None:
-    region_name: typing.Final = "eu-west-2"
-    bucket_name = "my-bucket"
-    key_prefix = "my-prefix/"  # Would usually end in a forward slash
+@pytest.mark.benchmark(group="TestStreamReadXbrlSyncS3Csv", warmup=True)
+class TestStreamReadXbrlSyncS3Csv:
+    @staticmethod
+    @mock_aws
+    def test_stream_read_xbrl_sync_s3_csv_fetches_all_files_if_bucket_empty() -> None:
+        region_name: typing.Final = "eu-west-2"
+        bucket_name = "my-bucket"
+        key_prefix = "my-prefix/"  # Would usually end in a forward slash
 
-    s3_client = boto3.client("s3", region_name=region_name)
-    s3_client.create_bucket(
-        Bucket=bucket_name,
-        CreateBucketConfiguration={
-            "LocationConstraint": region_name,
-        },
-    )
-
-    stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
-
-    expected_data_str = [
-        {key: str(value) if value is not None else "" for key, value in row.items()}
-        for row in get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip")
-    ]
-
-    assert expected_data_str == list(
-        csv.DictReader(
-            s3_client
-            .get_object(Bucket=bucket_name, Key=f"{key_prefix}2022-07-01--2022-07-31.csv")["Body"]
-            .read()
-            .decode()
-            .splitlines()
+        s3_client = boto3.client("s3", region_name=region_name)
+        s3_client.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={
+                "LocationConstraint": region_name,
+            },
         )
-    )
 
-    expected_data_str = [
-        {key: str(value) if value is not None else "" for key, value in row.items()}
-        for row in get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip")
-    ]
+        stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
 
-    assert expected_data_str == list(
-        csv.DictReader(
-            s3_client
-            .get_object(Bucket=bucket_name, Key=f"{key_prefix}2023-03-02--2023-03-02.csv")["Body"]
-            .read()
-            .decode()
-            .splitlines()
+        expected_data_str = [
+            {key: str(value) if value is not None else "" for key, value in row.items()}
+            for row in get_expected_data("https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip")
+        ]
+
+        assert expected_data_str == list(
+            csv.DictReader(
+                s3_client
+                .get_object(Bucket=bucket_name, Key=f"{key_prefix}2022-07-01--2022-07-31.csv")["Body"]
+                .read()
+                .decode()
+                .splitlines()
+            )
         )
-    )
 
+        expected_data_str = [
+            {key: str(value) if value is not None else "" for key, value in row.items()}
+            for row in get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip")
+        ]
 
-@pytest.mark.usefixtures(
-    "mock_companies_house_daily_zip",
-    "mock_companies_house_daily_html",
-    "mock_companies_house_monthly_html",
-    "mock_companies_house_historic_html",
-)
-@mock_aws
-def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone() -> None:
-    region_name: typing.Final = "eu-west-2"
-    bucket_name = "my-bucket"
-    key_prefix = "my-prefix/"  # Would usually end in a forward slash
-
-    s3_client = boto3.client("s3", region_name=region_name)
-    s3_client.create_bucket(
-        Bucket=bucket_name,
-        CreateBucketConfiguration={
-            "LocationConstraint": region_name,
-        },
-    )
-
-    s3_client.put_object(
-        Bucket=bucket_name, Key=f"{key_prefix}2022-07-01--2022-07-31.csv", Body="should-not-be-overwritten"
-    )
-
-    stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
-
-    expected_data_str = [
-        {key: str(value) if value is not None else "" for key, value in row.items()}
-        for row in get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip")
-    ]
-
-    assert (
-        s3_client.get_object(Bucket=bucket_name, Key=f"{key_prefix}2022-07-01--2022-07-31.csv")["Body"].read()
-        == b"should-not-be-overwritten"
-    )
-    assert expected_data_str == list(
-        csv.DictReader(
-            s3_client
-            .get_object(Bucket=bucket_name, Key=f"{key_prefix}2023-03-02--2023-03-02.csv")["Body"]
-            .read()
-            .decode()
-            .splitlines()
+        assert expected_data_str == list(
+            csv.DictReader(
+                s3_client
+                .get_object(Bucket=bucket_name, Key=f"{key_prefix}2023-03-02--2023-03-02.csv")["Body"]
+                .read()
+                .decode()
+                .splitlines()
+            )
         )
-    )
+
+    @staticmethod
+    @mock_aws
+    def test_stream_read_xbrl_sync_s3_csv_leaves_existing_files_alone() -> None:
+        region_name: typing.Final = "eu-west-2"
+        bucket_name = "my-bucket"
+        key_prefix = "my-prefix/"  # Would usually end in a forward slash
+
+        s3_client = boto3.client("s3", region_name=region_name)
+        s3_client.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={
+                "LocationConstraint": region_name,
+            },
+        )
+
+        s3_client.put_object(
+            Bucket=bucket_name, Key=f"{key_prefix}2022-07-01--2022-07-31.csv", Body="should-not-be-overwritten"
+        )
+
+        stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix)
+
+        expected_data_str = [
+            {key: str(value) if value is not None else "" for key, value in row.items()}
+            for row in get_expected_data("https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip")
+        ]
+
+        assert (
+            s3_client.get_object(Bucket=bucket_name, Key=f"{key_prefix}2022-07-01--2022-07-31.csv")["Body"].read()
+            == b"should-not-be-overwritten"
+        )
+        assert expected_data_str == list(
+            csv.DictReader(
+                s3_client
+                .get_object(Bucket=bucket_name, Key=f"{key_prefix}2023-03-02--2023-03-02.csv")["Body"]
+                .read()
+                .decode()
+                .splitlines()
+            )
+        )
+
+    @staticmethod
+    @mock_aws
+    def test_bench_stream_read_xbrl_sync_s3_csv(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        region_name: typing.Final = "eu-west-2"
+        bucket_name = "my-bucket"
+        key_prefix = "my-prefix/"  # Would usually end in a forward slash
+
+        s3_client = boto3.client("s3", region_name=region_name)
+        s3_client.create_bucket(
+            Bucket=bucket_name,
+            CreateBucketConfiguration={
+                "LocationConstraint": region_name,
+            },
+        )
+        benchmark(stream_read_xbrl_sync_s3_csv, s3_client, bucket_name, key_prefix)
 
 
 @pytest.mark.usefixtures("mock_companies_house_historic_zip_2008")
+@pytest.mark.benchmark(group="TestDebug")
 @mock_aws
-def test_debug() -> None:
-    # Just asserts it doesn't explode
-    with tempfile.TemporaryDirectory() as directory:
-        stream_read_xbrl_debug(
-            "https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip",
-            "Prod223_3384",
-            "09355500",
-            date.fromisoformat("2022-12-31"),
-            debug_cache_folder=directory,
-        )
+class TestDebug:
+    @staticmethod
+    def test_debug() -> None:
+        # Just asserts it doesn't explode
+        with tempfile.TemporaryDirectory() as directory:
+            stream_read_xbrl_debug(
+                "https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip",
+                "Prod223_3384",
+                "09355500",
+                date.fromisoformat("2022-12-31"),
+                debug_cache_folder=directory,
+            )
+
+    @staticmethod
+    def test_bench_debug(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            benchmark(
+                stream_read_xbrl_debug,
+                "https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip",
+                "Prod223_3384",
+                "09355500",
+                date.fromisoformat("2022-12-31"),
+                debug_cache_folder=directory,
+            )
 
 
 def test_entity_current_legal_name_in_span() -> None:
