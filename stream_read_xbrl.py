@@ -285,7 +285,7 @@ def _xbrl_to_rows(
                 _CUSTOM(
                     None,
                     lambda element, local_name, _attribute_name, context_ref: (
-                        (element,) if "Creditors" == local_name and "AfterOneYear" in context_ref else ()
+                        (element,) if local_name == "Creditors" and "AfterOneYear" in context_ref else ()
                     ),
                 ),
                 _parse_decimal,
@@ -313,7 +313,7 @@ def _xbrl_to_rows(
                     None,
                     lambda element, _local_name, attribute_name, _context_ref: (
                         (element,)
-                        if "Equity" == attribute_name and "ShareCapital" in element.get("contextRef", "")
+                        if attribute_name == "Equity" and "ShareCapital" in element.get("contextRef", "")
                         else ()
                     ),
                 ),
@@ -328,7 +328,7 @@ def _xbrl_to_rows(
                     None,
                     lambda element, _local_name, attribute_name, _context_ref: (
                         (element,)
-                        if "Equity" == attribute_name
+                        if attribute_name == "Equity"
                         and "RetainedEarningsAccumulatedLosses" in element.get("contextRef", "")
                         else ()
                     ),
@@ -343,7 +343,7 @@ def _xbrl_to_rows(
                 _CUSTOM(
                     None,
                     lambda element, _local_name, attribute_name, context_ref: (
-                        (element,) if "Equity" == attribute_name and "segment" not in context_ref else ()
+                        (element,) if attribute_name == "Equity" and "segment" not in context_ref else ()
                     ),
                 ),
                 _parse_decimal,
@@ -510,18 +510,16 @@ def _xbrl_to_rows(
     def tag_name_tests(
         local_name: str,
     ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]]]:
-        try:
-            yield from (tag_name_test_dict[local_name],)
-        except KeyError:
-            pass
+        tag_name_test = tag_name_test_dict.get(local_name)
+        if tag_name_test is not None:
+            yield from (tag_name_test,)
 
     def attribute_value_tests(
         attribute_value: str,
     ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]]]:
-        try:
-            yield from (attribute_value_test_dict[attribute_value],)
-        except KeyError:
-            pass
+        attribute_value_test = attribute_value_test_dict.get(attribute_value)
+        if attribute_value_test is not None:
+            yield from (attribute_value_test,)
 
     def handle_general(
         element: Element,
@@ -587,15 +585,13 @@ def _xbrl_to_rows(
 
                 handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
 
-        general_attributes = tuple(
-            general_attributes_with_priorities[name][1] for name in GENERAL_XPATH_MAPPINGS.keys()
-        )
+        general_attributes = tuple(general_attributes_with_priorities[name][1] for name in GENERAL_XPATH_MAPPINGS)
 
         periods = tuple(
             (
                 datetime.date.fromisoformat(period_start_end[0]),
                 datetime.date.fromisoformat(period_start_end[1]),
-                *tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS.keys()),
+                *tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS),
             )
             for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
         )
@@ -776,9 +772,11 @@ def stream_read_xbrl_sync(
             tuple[tuple[datetime.date, datetime.date], typing.Generator[XBRLRow, None, None]], None, None
         ]:
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
-                with get_content_streamed(client, zip_url) as chunks:
-                    with stream_read_xbrl_zip(chunks, zip_url=zip_url) as (_, rows):
-                        yield (start_date, end_date), rows
+                with get_content_streamed(client, zip_url) as chunks, stream_read_xbrl_zip(chunks, zip_url=zip_url) as (
+                    _,
+                    rows,
+                ):
+                    yield (start_date, end_date), rows
 
         yield (_COLUMNS, _final_date_and_rows())
 
