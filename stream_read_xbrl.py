@@ -682,6 +682,7 @@ def stream_read_xbrl_sync(
     None,
 ]:
     """Yields a stream of parsed XBRL data for files modified after the specified date."""
+
     def extract_start_end_dates(url: str) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
         file_name_no_ext = pathlib.Path(url).stem
         if "JanToDec" in file_name_no_ext or "JanuaryToDecember" in file_name_no_ext:
@@ -792,6 +793,7 @@ def stream_read_xbrl_sync(
 
 def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name: str, key_prefix: str) -> None:
     """Synchronizes XBRL data to an S3 bucket as CSV files."""
+
     def _to_file_like_obj(iterable: typing.Generator[bytes, None, None]) -> typing.BinaryIO:
         chunk = b""
         offset: int = 0
