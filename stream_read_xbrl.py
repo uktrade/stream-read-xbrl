@@ -890,7 +890,6 @@ def stream_read_xbrl_debug(
             logger.warning("Invalid file. Skipping: %s", fn)
             break
         run_code_, company_id_, date_, _ = mo.groups()
-        # print(_run_code, _company_id, _date)
 
         if run_code_ == run_code and company_id_ == company_id and date_ == date.isoformat().replace("-", ""):
             print("Found matching file", name, file=sys.stderr)
@@ -898,8 +897,7 @@ def stream_read_xbrl_debug(
             for chunk in chunks:
                 sys.stdout.buffer.write(chunk)
         else:
-            for chunk in chunks:
-                pass
+            collections.deque(chunks, maxlen=0)
 
     if not found:
         print("No matching member file found", file=sys.stderr)
