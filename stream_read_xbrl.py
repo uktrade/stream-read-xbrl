@@ -718,11 +718,14 @@ def stream_read_xbrl_sync(
                     if etag is None:
                         etag = r.headers["etag"]
                     elif etag != r.headers["etag"]:
-                        raise Exception("etag has changed since beginning requests")
+                        error_msg = "etag has changed since beginning requests"
+                        raise RuntimeError(error_msg)
                     if remaining is None:
                         remaining = int(r.headers["content-range"].split("/")[1])
                     content_length = int(r.headers["content-length"])
-                    assert content_length > 0
+                    if not content_length > 0:
+                        error_msg = "content_length is <= 0"
+                        raise ValueError(error_msg)
                     remaining -= content_length
                     yield from r.iter_bytes(chunk_size=65536)
                 start += chunk_size
@@ -884,7 +887,7 @@ def stream_read_xbrl_debug(
         fn = pathlib.Path(name.decode("utf-8")).name
         mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)", fn)
         if not mo:
-            logging.warning("Invalid file. Skipping: %s", fn)
+            logger.warning("Invalid file. Skipping: %s", fn)
             break
         run_code_, company_id_, date_, _ = mo.groups()
         # print(_run_code, _company_id, _date)
