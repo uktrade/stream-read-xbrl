@@ -1,32 +1,47 @@
 name: Tests
+
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+  push:
+    branches:
+      - main
 
 jobs:
   test:
-    name: Test
+    permissions:
+      contents: read
+      pull-requests: write
+    name: Checks and tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     strategy:
       matrix:
         python-version:
-          - "3.8"
           - "3.9"
           - "3.10"
           - "3.11"
           - "3.12"
+          - "3.13"
     steps:
-      - name: "Checkout"
-        uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v4"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '${{ matrix.python-version }}'
-      - name: "Install package and python dependencies"
-        run: |
-          pip install .[dev]
-      - name: "Test"
-        run: |
-          pytest --cov
-      - uses: codecov/codecov-action@v3
+          cache: 'pip'
+      - name: Install package and python dependencies
+        run: pip install -e ".[dev]"
+      - name: Check with pre-commit
+        env:
+          SKIP: validate-security-scan, run-security-scan, ruff-check, ruff-format, mypy-check, pytest-check
+        run: pre-commit run -a
+      - name: Lint with Ruff
+        run:  python -m ruff check .
+      - name: Format with Ruff
+        run:  python -m ruff format .
+      - name: Type check with mypy
+        run:  python -m mypy .
+      - name: Test with pytest
+        run:  python -m pytest

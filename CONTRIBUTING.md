@@ -42,9 +42,9 @@ You should not fork the repository if you're a member of uktrade.
     ```
 
 3.[Fork the repository](https://github.com/uktrade/stream-unzip/fork). Make a note of the "Owner" that you fork to. This is usually your username.
-  
+
   There is more documentation on forking in [GitHub's guide on contributing to projects](https://docs.github.com/en/get-started/quickstart/contributing-to-projects).
-  
+
 4. Clone the forked repository. In the following, replace my-username with the owner that you forked to in step 2.
 
     ```bash
@@ -66,7 +66,7 @@ Changes are then submitted via a Pull Request (PR). To do this:
     git checkout -b docs/add-example
     cd stream-read-xbrl
     ```
-    
+
 3. Make your changes in a text editor.
 
 4. Preview your changes locally.
@@ -75,7 +75,7 @@ Changes are then submitted via a Pull Request (PR). To do this:
     pip install -r requirements-docs.txt  # Only needed once
     mkdocs serve
     ```
-    
+
 5. Commit your change and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
 
     ```bash
@@ -83,7 +83,7 @@ Changes are then submitted via a Pull Request (PR). To do this:
     git commit -m "docs: add an example"
     gir push origin docs/add-example
     ```
-    
+
 6. Raise a PR at [https://github.com/uktrade/stream-read-xbrl/pulls](https://github.com/uktrade/stream-read-xbrl/pulls) against the main branch in stream-unzip.
 
 7. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.
@@ -106,20 +106,20 @@ Changes are then submitted via a Pull Request (PR). To do this:
     ```bash
     git checkout -b fix-a-bug-description
     ```
-    
+
 3. Make sure you can run existing tests locally
 
     ```bash
     pip install -e ".[dev]"  # Only needed once
     pytest
     ```
-    
+
 4. Make your changes in a text editor. In the cases of changing behaviour, this would usually include changing or adding at least one test in [test_stream_read_xbrl.py](https://github.com/uktrade/stream-unzip/blob/main/test_stream_read_xbrl.py), and running them.
 
     ```bash
     pytest
     ```
-    
+
 5. Commit your changes and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
 
     ```bash
@@ -127,7 +127,7 @@ Changes are then submitted via a Pull Request (PR). To do this:
     git commit -m "feat: the bug description"
     git push origin fix/the-bug-description
     ```
-    
+
 6. Raise a PR at https://github.com/uktrade/stream-read-xbrl/pulls(https://github.com/uktrade/stream-read-xbrl/pulls) against the main branch in stream-read-xbrl.
 
 7. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.

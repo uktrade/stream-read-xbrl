@@ -1,130 +1,159 @@
+"""Main classes, functions and code for stream-read-xbrl."""
+
+from __future__ import annotations
+
+import collections
+import collections.abc
+import concurrent.futures
 import csv
 import datetime
+import decimal
 import hashlib
+import io
 import logging
+import operator
 import os
+import pathlib
 import re
 import sys
+import typing
 import urllib.parse
-from dataclasses import dataclass
-from collections import defaultdict, deque
-from concurrent.futures import ProcessPoolExecutor
 from contextlib import contextmanager
-from decimal import Decimal
+from dataclasses import dataclass
 from itertools import chain
-from io import BytesIO, IOBase
-from pathlib import Path, PurePosixPath
-from typing import Optional, Callable
 
-import dateutil
 import dateutil.parser
-from bs4 import BeautifulSoup
 import httpx
-from lxml import etree
-from lxml.etree import XMLSyntaxError
+import lxml.etree
+from bs4 import BeautifulSoup
 from stream_unzip import stream_unzip
 
+if typing.TYPE_CHECKING:
+    import mypy_boto3_s3
+    from lxml.etree import _Element as Element
+
 _COLUMNS = (
-    'run_code',
-    'company_id',
-    'date',
-    'file_type',
-    'taxonomy',
-    'balance_sheet_date',
-    'companies_house_registered_number',
-    'entity_current_legal_name',
-    'company_dormant',
-    'average_number_employees_during_period',
-    'period_start',
-    'period_end',
-    'tangible_fixed_assets',
-    'debtors',
-    'cash_bank_in_hand',
-    'current_assets',
-    'creditors_due_within_one_year',
-    'creditors_due_after_one_year',
-    'net_current_assets_liabilities',
-    'total_assets_less_current_liabilities',
-    'net_assets_liabilities_including_pension_asset_liability',
-    'called_up_share_capital',
-    'profit_loss_account_reserve',
-    'shareholder_funds',
-    'turnover_gross_operating_revenue',
-    'other_operating_income',
-    'cost_sales',
-    'gross_profit_loss',
-    'administrative_expenses',
-    'raw_materials_consumables',
-    'staff_costs',
-    'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets',
-    'other_operating_charges_format2',
-    'operating_profit_loss',
-    'profit_loss_on_ordinary_activities_before_tax',
-    'tax_on_profit_or_loss_on_ordinary_activities',
-    'profit_loss_for_period',
-    'error',
-    'zip_url',
+    "run_code",
+    "company_id",
+    "date",
+    "file_type",
+    "taxonomy",
+    "balance_sheet_date",
+    "companies_house_registered_number",
+    "entity_current_legal_name",
+    "company_dormant",
+    "average_number_employees_during_period",
+    "period_start",
+    "period_end",
+    "tangible_fixed_assets",
+    "debtors",
+    "cash_bank_in_hand",
+    "current_assets",
+    "creditors_due_within_one_year",
+    "creditors_due_after_one_year",
+    "net_current_assets_liabilities",
+    "total_assets_less_current_liabilities",
+    "net_assets_liabilities_including_pension_asset_liability",
+    "called_up_share_capital",
+    "profit_loss_account_reserve",
+    "shareholder_funds",
+    "turnover_gross_operating_revenue",
+    "other_operating_income",
+    "cost_sales",
+    "gross_profit_loss",
+    "administrative_expenses",
+    "raw_materials_consumables",
+    "staff_costs",
+    "depreciation_other_amounts_written_off_tangible_intangible_fixed_assets",
+    "other_operating_charges_format2",
+    "operating_profit_loss",
+    "profit_loss_on_ordinary_activities_before_tax",
+    "tax_on_profit_or_loss_on_ordinary_activities",
+    "profit_loss_for_period",
+    "error",
+    "zip_url",
 )
 
 logger = logging.getLogger(__name__)
 
+XBRLData = typing.Union[str, bool, decimal.Decimal, datetime.date, None]
+XBRLRow = tuple[XBRLData, ...]
 
-def _xbrl_to_rows(name_xbrl_xml_str_orig):
+
+def _xbrl_to_rows(
+    name_xbrl_xml_str_orig: tuple[str, bytes],
+) -> tuple[XBRLRow, ...]:
     name, xbrl_xml_str_orig = name_xbrl_xml_str_orig
 
     # Slightly hacky way to remove BOM, which is present in some older data
-    xbrl_xml_str = BytesIO(xbrl_xml_str_orig[xbrl_xml_str_orig.find(b'<'):])
+    xbrl_xml_str = io.BytesIO(xbrl_xml_str_orig[xbrl_xml_str_orig.find(b"<") :])
 
     # Low level value parsers
 
-    def _date(text):
+    def _date(text: str) -> datetime.date:
         return dateutil.parser.parse(text).date()
 
-    def _parse(element, text, parser):
-        return \
-            parser(element, text.strip()) if text and text.strip() not in ['', '-', '—'] else \
-            None
+    def _parse(
+        element: Element,
+        text: str,
+        parser: collections.abc.Callable[[Element, str], typing.Any],
+    ) -> decimal.Decimal | None:
+        return parser(element, text.strip()) if text and text.strip() not in {"", "-", "—"} else None
 
-    def _parse_str(element, text):
-        return str(text).replace('\n', ' ').replace('"', '')
-    
-    def _parse_absolute(element, text):
+    def _parse_str(_element: Element, text: str) -> str:
+        return str(text).replace("\n", " ").replace('"', "")
+
+    def _parse_absolute(element: Element, text: str) -> decimal.Decimal | None:
         # Some cases where employee numbers have a negative sign attached,
         # seemingly indicating negative employee numbers
-        return abs(_parse_decimal_with_colon_or_dash(element, text))
+        decimal = _parse_decimal_with_colon_or_dash(element, text)
+        return abs(decimal) if decimal is not None else None
 
-    def _parse_decimal(element, text):
-        sign = -1 if element.get('sign', '') == '-' else +1
-        text_without_thousands_separator = \
-            text.replace('.', '').replace(',', '.') if element.get('format', '').rpartition(':')[2] == 'numdotcomma' else \
-            text.replace(' ', '') if element.get('format', '').rpartition(':')[2] == 'numspacedot' else \
-            text.replace(',', '')
-        if ' ' in text_without_thousands_separator:
-            text_without_thousands_separator = sum(map(Decimal, text_without_thousands_separator.split(" ")))
-        return sign * Decimal(text_without_thousands_separator) * Decimal(10) ** Decimal(element.get('scale', '0'))
+    def _parse_decimal(element: Element, text: str) -> decimal.Decimal:
+        sign = -1 if element.get("sign", "") == "-" else +1
+        text_without_thousands_separator_str = (
+            text.replace(".", "").replace(",", ".")
+            if element.get("format", "").rpartition(":")[2] == "numdotcomma"
+            else text.replace(" ", "")
+            if element.get("format", "").rpartition(":")[2] == "numspacedot"
+            else text.replace(",", "")
+        )
+        if " " in text_without_thousands_separator_str:
+            text_without_thousands_separator = sum(
+                map(decimal.Decimal, text_without_thousands_separator_str.split(" "))
+            )
+        else:
+            text_without_thousands_separator = decimal.Decimal(text_without_thousands_separator_str)
+        return (
+            sign
+            * decimal.Decimal(text_without_thousands_separator)
+            * decimal.Decimal(10) ** decimal.Decimal(element.get("scale", "0"))
+        )
 
-    def _parse_decimal_with_colon_or_dash(element, text):
+    def _parse_decimal_with_colon_or_dash(element: Element, text: str) -> decimal.Decimal | None:
         # Values seem to have a human readble prefix that isn't part of the value,
         # like "2017 - 2" to mean 2 employees. So we strip the prefix.
-        return _parse(element, re.sub(r'(.*:)|(.+- )', '', text), _parse_decimal)
+        return _parse(element, re.sub(r"(.*:)|(.+- )", "", text), _parse_decimal)
 
-    def _parse_date(element, text):
-        format = element.get('format','').rpartition(':')[2].lower()
-        day_first = format in ('datedaymonthyear', 'dateslasheu', 'datedoteu')
-        if format == 'datedaymonthyearen':
-            text = text.replace(' ','')
+    def _parse_date(element: Element, text: str) -> datetime.date:
+        date_format = element.get("format", "").rpartition(":")[2].lower()
+        day_first = date_format in {"datedaymonthyear", "dateslasheu", "datedoteu"}
+        if date_format == "datedaymonthyearen":
+            text = text.replace(" ", "")
         text = re.sub(r"(?i)(\d)((st)|(nd)|(rd)|(th))", r"\1", text)
         try:
             return dateutil.parser.parse(text, dayfirst=day_first).date()
         except dateutil.parser.ParserError:
             # Try to parse mis-spellings that still have the first 3 characters right
-            return dateutil.parser.parse(re.sub(r'([a-zA-Z]+)', lambda m: m.group(0)[:3], text), dayfirst=day_first).date()
+            return dateutil.parser.parse(
+                re.sub(r"([a-zA-Z]+)", lambda m: m.group(0)[:3], text), dayfirst=day_first
+            ).date()
 
-    def _parse_bool(element, text):
-        return False if text == 'false' else True if text == 'true' else None
+    def _parse_bool(_element: Element, text: str) -> bool | None:
+        return False if text == "false" else True if text == "true" else None
 
-    def _parse_reversed_bool(element, text):
-        return False if text == 'true' else True if text == 'false' else None
+    def _parse_reversed_bool(_element: Element, text: str) -> bool | None:
+        return False if text == "true" else True if text == "false" else None
 
     # Parsing strategy
     #
@@ -139,304 +168,327 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
     # Although in some cases a dictionary lookup doesn't seem possible, and so a custom matcher can be defined
 
     @dataclass
-    class _test():
-        name: Optional[str]
-        search: Callable = lambda element, local_name, attribute_name, context_ref: (element,)
+    class _TEST:
+        name: str | None
+        search: collections.abc.Callable[
+            [Element, typing.Any, typing.Any, typing.Any],
+            typing.Any,
+        ] = lambda element, _local_name, _attribute_name, _context_ref: (element,)
 
     @dataclass
-    class _tn(_test):
+    class _TN(_TEST):
         # (Local) Tag name, i.e. withoout namespace
         pass
 
     @dataclass
-    class _av(_test):
+    class _AV(_TEST):
         # Attribute value. Matches on the "name" attribute, but stripping off the namespace prefix
         pass
 
     @dataclass
-    class _custom(_test):
+    class _CUSTOM(_TEST):
         # Custom test when matching on tag name or name attribute isn't enought
         pass
 
-    GENERAL_XPATH_MAPPINGS = {
-        'balance_sheet_date': (
-            [
-                (_av('BalanceSheetDate'), _parse_date),
-                (_tn('BalanceSheetDate'), _parse_date),
-            ]
-        ),
-        'companies_house_registered_number': (
-            [
-                (_av('UKCompaniesHouseRegisteredNumber'), _parse_str),
-                (_tn('CompaniesHouseRegisteredNumber'), _parse_str),
-            ]
-        ),
-        'entity_current_legal_name': (
-            [
-                (_av('EntityCurrentLegalOrRegisteredName', lambda element, local_name, attribute_name, context_ref: chain((element,), element.xpath("./*[local-name()='span'][1]"),)), _parse_str),
-                (_tn('EntityCurrentLegalName', lambda element, local_name, attribute_name, context_ref: chain((element,), element.xpath("./*[local-name()='span'][1]"),)), _parse_str),
-            ]
-        ),
-        'company_dormant': (
-            [
-                (_av('EntityDormantTruefalse'), _parse_bool),
-                (_av('EntityDormant'), _parse_bool),
-                (_tn('CompanyDormant'), _parse_bool),
-                (_tn('CompanyNotDormant'), _parse_reversed_bool),
-            ]
-        ),
-        'average_number_employees_during_period': (
-            [
-                (_av('AverageNumberEmployeesDuringPeriod'), _parse_absolute),
-                (_av('EmployeesTotal'), _parse_absolute),
-                (_tn('AverageNumberEmployeesDuringPeriod'), _parse_absolute),
-                (_tn('EmployeesTotal'), _parse_absolute),
-            ]
-        ),
+    GENERAL_XPATH_MAPPINGS: dict[
+        str,
+        list[
+            tuple[_TEST, collections.abc.Callable[[Element, str], str | bool | decimal.Decimal | datetime.date | None]]
+        ],
+    ] = {
+        "balance_sheet_date": ([
+            (_AV("BalanceSheetDate"), _parse_date),
+            (_TN("BalanceSheetDate"), _parse_date),
+        ]),
+        "companies_house_registered_number": ([
+            (_AV("UKCompaniesHouseRegisteredNumber"), _parse_str),
+            (_TN("CompaniesHouseRegisteredNumber"), _parse_str),
+        ]),
+        "entity_current_legal_name": ([
+            (
+                _AV(
+                    "EntityCurrentLegalOrRegisteredName",
+                    lambda element, _local_name, _attribute_name, _context_ref: chain(
+                        (element,),
+                        typing.cast("list[Element]", element.xpath("./*[local-name()='span'][1]")),
+                    ),
+                ),
+                _parse_str,
+            ),
+            (
+                _TN(
+                    "EntityCurrentLegalName",
+                    lambda element, _local_name, _attribute_name, _context_ref: chain(
+                        (element,),
+                        typing.cast("list[Element]", element.xpath("./*[local-name()='span'][1]")),
+                    ),
+                ),
+                _parse_str,
+            ),
+        ]),
+        "company_dormant": ([
+            (_AV("EntityDormantTruefalse"), _parse_bool),
+            (_AV("EntityDormant"), _parse_bool),
+            (_TN("CompanyDormant"), _parse_bool),
+            (_TN("CompanyNotDormant"), _parse_reversed_bool),
+        ]),
+        "average_number_employees_during_period": ([
+            (_AV("AverageNumberEmployeesDuringPeriod"), _parse_absolute),
+            (_AV("EmployeesTotal"), _parse_absolute),
+            (_TN("AverageNumberEmployeesDuringPeriod"), _parse_absolute),
+            (_TN("EmployeesTotal"), _parse_absolute),
+        ]),
     }
 
-    PERIODICAL_XPATH_MAPPINGS = {
+    PERIODICAL_XPATH_MAPPINGS: dict[
+        str,
+        list[
+            tuple[_TEST, collections.abc.Callable[[Element, str], str | bool | decimal.Decimal | datetime.date | None]]
+        ],
+    ] = {
         # balance sheet
-        'tangible_fixed_assets': (
-            [
-                (_tn('FixedAssets'), _parse_decimal),
-                (_av('FixedAssets'), _parse_decimal),
-                (_tn('TangibleFixedAssets'), _parse_decimal),
-                (_av('TangibleFixedAssets'), _parse_decimal),
-                (_av('PropertyPlantEquipment'), _parse_decimal),
-            ]
-        ),
-        'debtors': (
-            [
-                (_tn('Debtors'), _parse_decimal),
-                (_av('Debtors'), _parse_decimal),
-            ]
-        ),
-        'cash_bank_in_hand': (
-            [
-                (_tn('CashBankInHand'), _parse_decimal),
-                (_av('CashBankInHand'), _parse_decimal),
-                (_av('CashBankOnHand'), _parse_decimal),
-            ]
-        ),
-        'current_assets': (
-            [
-                (_tn('CurrentAssets'), _parse_decimal),
-                (_av('CurrentAssets'), _parse_decimal),
-            ]
-        ),
-        'creditors_due_within_one_year': (
-            [
-                (_av('CreditorsDueWithinOneYear'), _parse_decimal),
-                (_av('Creditors', lambda element, local_name, attribute_name, context_ref: (element,) if 'WithinOneYear' in element.get('contextRef') else ()), _parse_decimal),
-            ]
-        ),
-        'creditors_due_after_one_year': (
-            [
-                (_av('CreditorsDueAfterOneYear'), _parse_decimal),
-                (_custom(None, lambda element, local_name, attribute_name, context_ref: (element,) if 'Creditors' == local_name and 'AfterOneYear' in context_ref else ()), _parse_decimal)
-            ]
-        ),
-        'net_current_assets_liabilities': (
-            [
-                (_tn('NetCurrentAssetsLiabilities'), _parse_decimal),
-                (_av('NetCurrentAssetsLiabilities'), _parse_decimal),
-            ]
-        ),
-        'total_assets_less_current_liabilities': (
-            [
-                (_tn('TotalAssetsLessCurrentLiabilities'), _parse_decimal),
-                (_av('TotalAssetsLessCurrentLiabilities'), _parse_decimal),
-            ]
-        ),
-        'net_assets_liabilities_including_pension_asset_liability': (
-            [
-                (_tn('NetAssetsLiabilitiesIncludingPensionAssetLiability'), _parse_decimal),
-                (_av('NetAssetsLiabilitiesIncludingPensionAssetLiability'), _parse_decimal),
-                (_tn('NetAssetsLiabilities'), _parse_decimal),
-                (_av('NetAssetsLiabilities'), _parse_decimal),
-            ]
-        ),
-        'called_up_share_capital': (
-            [
-                (_tn('CalledUpShareCapital'), _parse_decimal),
-                (_av('CalledUpShareCapital'), _parse_decimal),
-                (_custom(None, lambda element, local_name, attribute_name, context_ref: (element,) if 'Equity' == attribute_name and 'ShareCapital' in element.get('contextRef', '') else ()), _parse_decimal),
-            ]
-        ),
-        'profit_loss_account_reserve': (
-            [
-                (_tn('ProfitLossAccountReserve'), _parse_decimal),
-                (_av('ProfitLossAccountReserve'), _parse_decimal),
-                (_custom(None, lambda element, local_name, attribute_name, context_ref: (element,) if 'Equity' == attribute_name and 'RetainedEarningsAccumulatedLosses' in element.get('contextRef', '') else ()), _parse_decimal),
-            ]
-        ),
-        'shareholder_funds': (
-            [
-                (_tn('ShareholderFunds'), _parse_decimal),
-                (_av('ShareholderFunds'), _parse_decimal),
-                (_custom(None,  lambda element, local_name, attribute_name, context_ref: (element,) if 'Equity' == attribute_name and 'segment' not in context_ref else ()), _parse_decimal),
-            ]
-        ),
+        "tangible_fixed_assets": ([
+            (_TN("FixedAssets"), _parse_decimal),
+            (_AV("FixedAssets"), _parse_decimal),
+            (_TN("TangibleFixedAssets"), _parse_decimal),
+            (_AV("TangibleFixedAssets"), _parse_decimal),
+            (_AV("PropertyPlantEquipment"), _parse_decimal),
+        ]),
+        "debtors": ([
+            (_TN("Debtors"), _parse_decimal),
+            (_AV("Debtors"), _parse_decimal),
+        ]),
+        "cash_bank_in_hand": ([
+            (_TN("CashBankInHand"), _parse_decimal),
+            (_AV("CashBankInHand"), _parse_decimal),
+            (_AV("CashBankOnHand"), _parse_decimal),
+        ]),
+        "current_assets": ([
+            (_TN("CurrentAssets"), _parse_decimal),
+            (_AV("CurrentAssets"), _parse_decimal),
+        ]),
+        "creditors_due_within_one_year": ([
+            (_AV("CreditorsDueWithinOneYear"), _parse_decimal),
+            (
+                _AV(
+                    "Creditors",
+                    lambda element, _local_name, _attribute_name, _context_ref: (
+                        (element,) if "WithinOneYear" in element.get("contextRef", "") else ()
+                    ),
+                ),
+                _parse_decimal,
+            ),
+        ]),
+        "creditors_due_after_one_year": ([
+            (_AV("CreditorsDueAfterOneYear"), _parse_decimal),
+            (
+                _CUSTOM(
+                    None,
+                    lambda element, local_name, _attribute_name, context_ref: (
+                        (element,) if local_name == "Creditors" and "AfterOneYear" in context_ref else ()
+                    ),
+                ),
+                _parse_decimal,
+            ),
+        ]),
+        "net_current_assets_liabilities": ([
+            (_TN("NetCurrentAssetsLiabilities"), _parse_decimal),
+            (_AV("NetCurrentAssetsLiabilities"), _parse_decimal),
+        ]),
+        "total_assets_less_current_liabilities": ([
+            (_TN("TotalAssetsLessCurrentLiabilities"), _parse_decimal),
+            (_AV("TotalAssetsLessCurrentLiabilities"), _parse_decimal),
+        ]),
+        "net_assets_liabilities_including_pension_asset_liability": ([
+            (_TN("NetAssetsLiabilitiesIncludingPensionAssetLiability"), _parse_decimal),
+            (_AV("NetAssetsLiabilitiesIncludingPensionAssetLiability"), _parse_decimal),
+            (_TN("NetAssetsLiabilities"), _parse_decimal),
+            (_AV("NetAssetsLiabilities"), _parse_decimal),
+        ]),
+        "called_up_share_capital": ([
+            (_TN("CalledUpShareCapital"), _parse_decimal),
+            (_AV("CalledUpShareCapital"), _parse_decimal),
+            (
+                _CUSTOM(
+                    None,
+                    lambda element, _local_name, attribute_name, _context_ref: (
+                        (element,)
+                        if attribute_name == "Equity" and "ShareCapital" in element.get("contextRef", "")
+                        else ()
+                    ),
+                ),
+                _parse_decimal,
+            ),
+        ]),
+        "profit_loss_account_reserve": ([
+            (_TN("ProfitLossAccountReserve"), _parse_decimal),
+            (_AV("ProfitLossAccountReserve"), _parse_decimal),
+            (
+                _CUSTOM(
+                    None,
+                    lambda element, _local_name, attribute_name, _context_ref: (
+                        (element,)
+                        if attribute_name == "Equity"
+                        and "RetainedEarningsAccumulatedLosses" in element.get("contextRef", "")
+                        else ()
+                    ),
+                ),
+                _parse_decimal,
+            ),
+        ]),
+        "shareholder_funds": ([
+            (_TN("ShareholderFunds"), _parse_decimal),
+            (_AV("ShareholderFunds"), _parse_decimal),
+            (
+                _CUSTOM(
+                    None,
+                    lambda element, _local_name, attribute_name, context_ref: (
+                        (element,) if attribute_name == "Equity" and "segment" not in context_ref else ()
+                    ),
+                ),
+                _parse_decimal,
+            ),
+        ]),
         # income statement
-        'turnover_gross_operating_revenue': (
-            [
-                (_tn('TurnoverGrossOperatingRevenue'), _parse_decimal),
-                (_av('TurnoverGrossOperatingRevenue'), _parse_decimal),
-                (_tn('TurnoverRevenue'), _parse_decimal),
-                (_av('TurnoverRevenue'), _parse_decimal),
-            ]
-        ),
-        'other_operating_income': (
-            [
-                (_tn('OtherOperatingIncome'), _parse_decimal),
-                (_av('OtherOperatingIncome'), _parse_decimal),
-                (_tn('OtherOperatingIncomeFormat2'), _parse_decimal),
-                (_av('OtherOperatingIncomeFormat2'), _parse_decimal),
-            ]
-        ),
-        'cost_sales': (
-            [
-                (_tn('CostSales'), _parse_decimal),
-                (_av('CostSales'), _parse_decimal),
-            ]
-        ),
-        'gross_profit_loss': (
-            [
-                (_tn('GrossProfitLoss'), _parse_decimal),
-                (_av('GrossProfitLoss'), _parse_decimal),
-            ]
-        ),
-        'administrative_expenses': (
-            [
-                (_tn('AdministrativeExpenses'), _parse_decimal),
-                (_av('AdministrativeExpenses'), _parse_decimal),
-            ]
-        ),
-        'raw_materials_consumables': (
-            [
-                (_tn('RawMaterialsConsumables'), _parse_decimal),
-                (_av('RawMaterialsConsumables'), _parse_decimal),
-                (_tn('RawMaterialsConsumablesUsed'), _parse_decimal),
-                (_av('RawMaterialsConsumablesUsed'), _parse_decimal),
-            ]
-        ),
-        'staff_costs': (
-            [
-                (_tn('StaffCosts'), _parse_decimal),
-                (_av('StaffCosts'), _parse_decimal),
-                (_tn('StaffCostsEmployeeBenefitsExpense'), _parse_decimal),
-                (_av('StaffCostsEmployeeBenefitsExpense'), _parse_decimal),
-            ]
-        ),
-        'depreciation_other_amounts_written_off_tangible_intangible_fixed_assets': (
-            [
-                (_tn('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'), _parse_decimal),
-                (_av('DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets'), _parse_decimal),
-                (_tn('DepreciationAmortisationImpairmentExpense'), _parse_decimal),
-                (_av('DepreciationAmortisationImpairmentExpense'), _parse_decimal),
-            ]
-        ),
-        'other_operating_charges_format2': (
-            [
-                (_tn('OtherOperatingChargesFormat2'), _parse_decimal),
-                (_av('OtherOperatingChargesFormat2'), _parse_decimal),
-                (_tn('OtherOperatingExpensesFormat2'), _parse_decimal),
-                (_av('OtherOperatingExpensesFormat2'), _parse_decimal),
-            ]
-        ),
-        'operating_profit_loss': (
-            [
-                (_tn('OperatingProfitLoss'), _parse_decimal),
-                (_av('OperatingProfitLoss'), _parse_decimal),
-            ]
-        ),
-        'profit_loss_on_ordinary_activities_before_tax': (
-            [
-                (_tn('ProfitLossOnOrdinaryActivitiesBeforeTax'), _parse_decimal),
-                (_av('ProfitLossOnOrdinaryActivitiesBeforeTax'), _parse_decimal),
-            ]
-        ),
-        'tax_on_profit_or_loss_on_ordinary_activities': (
-            [
-                (_tn('TaxOnProfitOrLossOnOrdinaryActivities'), _parse_decimal),
-                (_av('TaxOnProfitOrLossOnOrdinaryActivities'), _parse_decimal),
-                (_tn('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'), _parse_decimal),
-                (_av('TaxTaxCreditOnProfitOrLossOnOrdinaryActivities'), _parse_decimal),
-            ]
-        ),
-        'profit_loss_for_period': (
-            [
-                (_tn('ProfitLoss'), _parse_decimal),
-                (_av('ProfitLoss'), _parse_decimal),
-                (_tn('ProfitLossForPeriod'), _parse_decimal),
-                (_av('ProfitLossForPeriod'), _parse_decimal),
-            ]
-        ),
+        "turnover_gross_operating_revenue": ([
+            (_TN("TurnoverGrossOperatingRevenue"), _parse_decimal),
+            (_AV("TurnoverGrossOperatingRevenue"), _parse_decimal),
+            (_TN("TurnoverRevenue"), _parse_decimal),
+            (_AV("TurnoverRevenue"), _parse_decimal),
+        ]),
+        "other_operating_income": ([
+            (_TN("OtherOperatingIncome"), _parse_decimal),
+            (_AV("OtherOperatingIncome"), _parse_decimal),
+            (_TN("OtherOperatingIncomeFormat2"), _parse_decimal),
+            (_AV("OtherOperatingIncomeFormat2"), _parse_decimal),
+        ]),
+        "cost_sales": ([
+            (_TN("CostSales"), _parse_decimal),
+            (_AV("CostSales"), _parse_decimal),
+        ]),
+        "gross_profit_loss": ([
+            (_TN("GrossProfitLoss"), _parse_decimal),
+            (_AV("GrossProfitLoss"), _parse_decimal),
+        ]),
+        "administrative_expenses": ([
+            (_TN("AdministrativeExpenses"), _parse_decimal),
+            (_AV("AdministrativeExpenses"), _parse_decimal),
+        ]),
+        "raw_materials_consumables": ([
+            (_TN("RawMaterialsConsumables"), _parse_decimal),
+            (_AV("RawMaterialsConsumables"), _parse_decimal),
+            (_TN("RawMaterialsConsumablesUsed"), _parse_decimal),
+            (_AV("RawMaterialsConsumablesUsed"), _parse_decimal),
+        ]),
+        "staff_costs": ([
+            (_TN("StaffCosts"), _parse_decimal),
+            (_AV("StaffCosts"), _parse_decimal),
+            (_TN("StaffCostsEmployeeBenefitsExpense"), _parse_decimal),
+            (_AV("StaffCostsEmployeeBenefitsExpense"), _parse_decimal),
+        ]),
+        "depreciation_other_amounts_written_off_tangible_intangible_fixed_assets": ([
+            (_TN("DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets"), _parse_decimal),
+            (_AV("DepreciationOtherAmountsWrittenOffTangibleIntangibleFixedAssets"), _parse_decimal),
+            (_TN("DepreciationAmortisationImpairmentExpense"), _parse_decimal),
+            (_AV("DepreciationAmortisationImpairmentExpense"), _parse_decimal),
+        ]),
+        "other_operating_charges_format2": ([
+            (_TN("OtherOperatingChargesFormat2"), _parse_decimal),
+            (_AV("OtherOperatingChargesFormat2"), _parse_decimal),
+            (_TN("OtherOperatingExpensesFormat2"), _parse_decimal),
+            (_AV("OtherOperatingExpensesFormat2"), _parse_decimal),
+        ]),
+        "operating_profit_loss": ([
+            (_TN("OperatingProfitLoss"), _parse_decimal),
+            (_AV("OperatingProfitLoss"), _parse_decimal),
+        ]),
+        "profit_loss_on_ordinary_activities_before_tax": ([
+            (_TN("ProfitLossOnOrdinaryActivitiesBeforeTax"), _parse_decimal),
+            (_AV("ProfitLossOnOrdinaryActivitiesBeforeTax"), _parse_decimal),
+        ]),
+        "tax_on_profit_or_loss_on_ordinary_activities": ([
+            (_TN("TaxOnProfitOrLossOnOrdinaryActivities"), _parse_decimal),
+            (_AV("TaxOnProfitOrLossOnOrdinaryActivities"), _parse_decimal),
+            (_TN("TaxTaxCreditOnProfitOrLossOnOrdinaryActivities"), _parse_decimal),
+            (_AV("TaxTaxCreditOnProfitOrLossOnOrdinaryActivities"), _parse_decimal),
+        ]),
+        "profit_loss_for_period": ([
+            (_TN("ProfitLoss"), _parse_decimal),
+            (_AV("ProfitLoss"), _parse_decimal),
+            (_TN("ProfitLossForPeriod"), _parse_decimal),
+            (_AV("ProfitLossForPeriod"), _parse_decimal),
+        ]),
     }
 
-    ALL_MAPPINGS = dict(**GENERAL_XPATH_MAPPINGS, **PERIODICAL_XPATH_MAPPINGS)
+    all_mappings = dict(**GENERAL_XPATH_MAPPINGS, **PERIODICAL_XPATH_MAPPINGS)
 
-    TAG_NAME_TESTS = {
+    tag_name_test_dict = {
         test.name: (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
-        if isinstance(test, _tn)
+        if isinstance(test, _TN)
     }
 
-    ATTRIBUTE_VALUE_TESTS = {
+    attribute_value_test_dict = {
         test.name: (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
-        if isinstance(test, _av)
+        if isinstance(test, _AV)
     }
 
-    CUSTOM_TESTS = tuple(
+    custom_tests = tuple(
         (name, priority, test, parser)
-        for (name, tests) in ALL_MAPPINGS.items()
+        for (name, tests) in all_mappings.items()
         for (priority, (test, parser)) in enumerate(tests)
-        if isinstance(test, _custom)
+        if isinstance(test, _CUSTOM)
     )
 
-    def _get_dates(context):
-        instant_elements = context.xpath("./*[local-name()='instant']")
-        start_date_text_nodes = context.xpath("./*[local-name()='startDate']/text()")
-        end_date_text_nodes = context.xpath("./*[local-name()='endDate']/text()")
-        return \
-            (None, None) if context is None else \
-            (instant_elements[0].text.strip(), instant_elements[0].text.strip()) if instant_elements else \
-            (None, None) if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None else \
-            (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
+    def _get_dates(context: Element) -> tuple[str | bytes | None, str | bytes | None]:
+        instant_elements = typing.cast("Element", context.xpath("./*[local-name()='instant']"))
+        start_date_text_nodes = typing.cast("str", context.xpath("./*[local-name()='startDate']/text()"))
+        end_date_text_nodes = typing.cast("str", context.xpath("./*[local-name()='endDate']/text()"))
+        return (
+            (None, None)
+            if context is None
+            else (instant_elements[0].text.strip(), instant_elements[0].text.strip())
+            if instant_elements and instant_elements[0].text
+            else (None, None)
+            if start_date_text_nodes[0] is None or end_date_text_nodes[0] is None
+            else (start_date_text_nodes[0].strip(), end_date_text_nodes[0].strip())
+        )
 
     try:
-        document = etree.parse(xbrl_xml_str, etree.XMLParser(ns_clean=True, recover=True))
+        document = lxml.etree.parse(xbrl_xml_str, lxml.etree.XMLParser(ns_clean=True, recover=True))
         root = document.getroot()
         document.xpath("//*[0]")
-    except:
+    except (lxml.etree.Error, AssertionError):
         # In at least one case - Prod224_9956_04944372_20100331.xml, the XML seems very badly formed.
         # Suspect this is before Companies House had better validation. The best we can do is log and
         # carry on. We can at least still get a row in the data
         logger.warning("Bad XML. Name: %s XML: %s", name, xbrl_xml_str_orig)
-        document = etree.parse(BytesIO(b'<?xml version="1.0" encoding="UTF-8"?><root></root>'), etree.XMLParser(ns_clean=True, recover=True))
+        document = lxml.etree.parse(
+            io.BytesIO(b'<?xml version="1.0" encoding="UTF-8"?><root></root>'),
+            lxml.etree.XMLParser(ns_clean=True, recover=True),
+        )
         root = document.getroot()
 
     context_dates = {
-        e.get('id'): _get_dates(period)
-        for e in document.xpath("//*[local-name()='context']")
-        for period in e.xpath("./*[local-name()='period']")[:1]
+        e.get("id"): _get_dates(period)
+        for e in typing.cast("list[Element]", document.xpath("//*[local-name()='context']"))
+        for period in typing.cast("list[Element]", e.xpath("./*[local-name()='period']"))[:1]
     }
 
-    fn = os.path.basename(name)
+    fn = pathlib.Path(name).name
     # Some April 2021 data files end in .zip, but seem to really be html
-    mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml|zip)', fn)
+    mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml|zip)", fn)
     if not mo:
         logger.warning("Invalid file. Skipping: %s", fn)
-        return []
-    run_code, company_id, date, filetype = mo.groups()
+        return ()
+    run_code, company_id, date, filetype = map(str, mo.groups())
     allowed_taxonomies = [
-        'http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01',
-        'http://www.xbrl.org/uk/gaap/core/2009-09-01',
-        'http://xbrl.frc.org.uk/fr/2014-09-01/core',
+        "http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01",
+        "http://www.xbrl.org/uk/gaap/core/2009-09-01",
+        "http://xbrl.frc.org.uk/fr/2014-09-01/core",
     ]
 
     core_attributes = (
@@ -444,109 +496,143 @@ def _xbrl_to_rows(name_xbrl_xml_str_orig):
         company_id,
         _date(date),
         filetype,
-        ';'.join(set(allowed_taxonomies) & set(root.nsmap.values())),
+        ";".join(set(allowed_taxonomies) & set(root.nsmap.values())),
     )
 
     # Mutable dictionaries to store the "priority" (lower is better) of a found value
-    general_attributes_with_priorities = {
-        name: (10, None)
-        for name in GENERAL_XPATH_MAPPINGS.keys()
-    }
-    periodic_attributes_with_priorities = defaultdict(lambda: {
-        name: (10, None)
-        for name in PERIODICAL_XPATH_MAPPINGS.keys()
-    })
+    general_attributes_with_priorities: dict[str, tuple[int, decimal.Decimal | None]] = dict.fromkeys(
+        GENERAL_XPATH_MAPPINGS.keys(), (10, None)
+    )
+    periodic_attributes_with_priorities: collections.defaultdict[
+        typing.Any, dict[str, tuple[int, decimal.Decimal | None]]
+    ] = collections.defaultdict(lambda: dict.fromkeys(PERIODICAL_XPATH_MAPPINGS.keys(), (10, None)))
 
-    def tag_name_tests(local_name):
-        try:
-            yield from (TAG_NAME_TESTS[local_name],)
-        except KeyError:
-            pass
+    def tag_name_tests(
+        local_name: str,
+    ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]]]:
+        tag_name_test = tag_name_test_dict.get(local_name)
+        if tag_name_test is not None:
+            yield from (tag_name_test,)
 
-    def attribute_value_tests(attribute_value):
-        try:
-            yield from (ATTRIBUTE_VALUE_TESTS[attribute_value],)
-        except KeyError:
-            pass
+    def attribute_value_tests(
+        attribute_value: str,
+    ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]]]:
+        attribute_value_test = attribute_value_test_dict.get(attribute_value)
+        if attribute_value_test is not None:
+            yield from (attribute_value_test,)
 
-    def handle_general(element, local_name, attribute_value, context_ref, name, priority, test, parse):
-        best_priority, best_value = general_attributes_with_priorities[name]
+    def handle_general(
+        element: Element,
+        local_name: str,
+        attribute_value: str,
+        context_ref: str,
+        name: str,
+        priority: int,
+        test: _TEST,
+        parse: collections.abc.Callable[[Element, str], typing.Any],
+    ) -> None:
+        best_priority, _best_value = general_attributes_with_priorities[name]
 
         if priority > best_priority:
             return
 
-        for element in test.search(element, local_name, attribute_value, context_ref):
-            filtered = ((e.text or '') for e in element.iter() if e.tag.rpartition('}')[2] != "exclude")
-            value = _parse(element, ''.join(filtered), parse)
+        for found_element in test.search(element, local_name, attribute_value, context_ref):
+            filtered = ((e.text or "") for e in found_element.iter() if e.tag.rpartition("}")[2] != "exclude")
+            value = _parse(found_element, "".join(filtered), parse)
             if value is not None:
                 general_attributes_with_priorities[name] = (priority, value)
                 break
 
-    def handle_periodic(element, local_name, attribute_value, context_ref, name, priority, test, parse):
+    def handle_periodic(
+        element: Element,
+        local_name: str,
+        attribute_value: str,
+        context_ref: str,
+        name: str,
+        priority: int,
+        test: _TEST,
+        parse: collections.abc.Callable[[Element, str], typing.Any],
+    ) -> None:
         if not context_ref:
             return
         dates = context_dates.get(context_ref)
         if not dates:
             return
 
-        for element in test.search(element, local_name, attribute_value, context_ref):
-            best_priority, best_value = periodic_attributes_with_priorities[dates][name]
+        for found_element in test.search(element, local_name, attribute_value, context_ref):
+            best_priority, _best_value = periodic_attributes_with_priorities[dates][name]
 
             if priority >= best_priority:
                 return
 
-            filtered = ((e.text or '') for e in element.iter() if etree.QName(e).localname != "exclude")
-            value = _parse(element, ''.join(filtered), parse)
+            filtered = ((e.text or "") for e in found_element.iter() if lxml.etree.QName(e).localname != "exclude")
+            value = _parse(found_element, "".join(filtered), parse)
             if value is not None:
                 periodic_attributes_with_priorities[dates][name] = (priority, value)
                 break
 
     error = None
-    try:          
-        for element in document.xpath('//*'):
-            _, _, local_name = element.tag.rpartition('}')
-            _, _, attribute_value = element.get('name', '').rpartition(':')
-            context_ref = element.get('contextRef', '')
+    try:
+        for element in typing.cast("list[Element]", document.xpath("//*")):
+            _, _, local_name = element.tag.rpartition("}")
+            _, _, attribute_value = element.get("name", "").rpartition(":")
+            context_ref = element.get("contextRef", "")
 
-            for name, priority, test, parse in chain(tag_name_tests(local_name), attribute_value_tests(attribute_value), CUSTOM_TESTS):
-                handler = \
-                    handle_general if name in general_attributes_with_priorities else \
-                    handle_periodic
+            for name, priority, test, parse in chain(
+                tag_name_tests(local_name), attribute_value_tests(attribute_value), custom_tests
+            ):
+                handler = handle_general if name in general_attributes_with_priorities else handle_periodic
 
                 handler(element, local_name, attribute_value, context_ref, name, priority, test, parse)
 
-        general_attributes = tuple(
-            general_attributes_with_priorities[name][1]
-            for name in GENERAL_XPATH_MAPPINGS.keys()
-        )
+        general_attributes = tuple(general_attributes_with_priorities[name][1] for name in GENERAL_XPATH_MAPPINGS)
 
         periods = tuple(
-            (datetime.date.fromisoformat(period_start_end[0]), datetime.date.fromisoformat(period_start_end[1]))
-            + tuple(
-                periodic_attributes[name][1]
-                for name in PERIODICAL_XPATH_MAPPINGS.keys()
+            (
+                datetime.date.fromisoformat(period_start_end[0]),
+                datetime.date.fromisoformat(period_start_end[1]),
+                *tuple(periodic_attributes[name][1] for name in PERIODICAL_XPATH_MAPPINGS),
             )
             for period_start_end, periodic_attributes in periodic_attributes_with_priorities.items()
         )
-        sorted_periods = sorted(periods, key=lambda period: (period[0], period[1]), reverse=True)
+        sorted_periods = sorted(periods, key=operator.itemgetter(0, 1), reverse=True)
     except ValueError as e:
         error = str(e)
+        return (
+            (core_attributes + (None,) * (2 + len(GENERAL_XPATH_MAPPINGS) + len(PERIODICAL_XPATH_MAPPINGS)) + (error,)),
+        )
 
-    return \
-        ((core_attributes + (None,) * (2 + len(GENERAL_XPATH_MAPPINGS) + len(PERIODICAL_XPATH_MAPPINGS)) + (error,)),) if error is not None else \
-        tuple((core_attributes + general_attributes + period + (None,)) for period in sorted_periods) if sorted_periods else \
-        ((core_attributes + general_attributes + (None,) * (3 + len(PERIODICAL_XPATH_MAPPINGS))),)
+    return (
+        tuple((core_attributes + general_attributes + period + (None,)) for period in sorted_periods)
+        if sorted_periods
+        else ((core_attributes + general_attributes + (None,) * (3 + len(PERIODICAL_XPATH_MAPPINGS))),)
+    )
 
 
 @contextmanager
 def stream_read_xbrl_zip(
-    zip_bytes_iter,
-    zip_url=None,
-):
-    queue = deque()
-    num_workers = max(os.cpu_count() - 1, 1)
+    zip_bytes_iter: typing.Iterable[bytes],
+    zip_url: str | None = None,
+) -> typing.Generator[
+    tuple[tuple[str, ...], typing.Generator[XBRLRow, None, None]],
+    None,
+    None,
+]:
+    """Streams and parses XBRL files from a ZIP byte-stream.
 
-    def imap(executor, func, param_iterables):
+    Yields:
+    A tuple of (_COLUMNS, row_generator).
+    The row_generator yields XBRLRow tuples with the zip_url appended to each row.
+    """
+    queue: collections.deque[concurrent.futures.Future[tuple[XBRLRow, ...]]] = collections.deque()
+    cpu_count = os.cpu_count()
+    num_workers = max(cpu_count - 1, 1) if cpu_count else None
+
+    def imap(
+        executor: concurrent.futures.ProcessPoolExecutor,
+        func: collections.abc.Callable[[tuple[str, bytes]], tuple[XBRLRow, ...]],
+        param_iterables: typing.Generator[tuple[str, bytes], None, None],
+    ) -> typing.Generator[tuple[XBRLRow, ...], None, None]:
         for params in param_iterables:
             if len(queue) == num_workers:
                 yield queue.popleft().result()
@@ -556,78 +642,98 @@ def stream_read_xbrl_zip(
         while queue:
             yield queue.popleft().result()
 
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        yield _COLUMNS, (
-            row + (zip_url,)
-            for results in imap(executor, _xbrl_to_rows, ((name.decode(), b''.join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)))
-            for row in results
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        yield (
+            _COLUMNS,
+            (
+                (*row, zip_url)
+                for results in imap(
+                    executor,
+                    _xbrl_to_rows,
+                    ((name.decode(), b"".join(chunks)) for name, _, chunks in stream_unzip(zip_bytes_iter)),
+                )
+                for row in results
+            ),
         )
 
 
 @contextmanager
 def stream_read_xbrl_sync(
-    ingest_data_after_date=datetime.date(datetime.MINYEAR, 1, 1),
-    data_urls=(
-        'https://download.companieshouse.gov.uk/en_accountsdata.html',
-        'https://download.companieshouse.gov.uk/en_monthlyaccountsdata.html',
-        'https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html',
+    ingest_data_after_date: datetime.date = datetime.date(datetime.MINYEAR, 1, 1),
+    data_urls: tuple[str, ...] = (
+        "https://download.companieshouse.gov.uk/en_accountsdata.html",
+        "https://download.companieshouse.gov.uk/en_monthlyaccountsdata.html",
+        "https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html",
     ),
-    get_client = lambda: httpx.Client(timeout=60.0, transport=httpx.HTTPTransport(retries=3)),
-    chunk_size = 100 * 1048576  # 100 MiB
-):
-    def extract_start_end_dates(url):
-        file_basename = os.path.basename(url)
-        file_name_no_ext = os.path.splitext(file_basename)[0]
+    get_client: collections.abc.Callable[[], httpx.Client] = lambda: httpx.Client(
+        timeout=60.0, transport=httpx.HTTPTransport(retries=3)
+    ),
+    chunk_size: int = 100 * 1048576,  # 100 MiB
+) -> typing.Generator[
+    tuple[
+        tuple[str, ...],
+        typing.Generator[
+            tuple[tuple[datetime.date, datetime.date], typing.Generator[XBRLRow, None, None]],
+            None,
+            None,
+        ],
+    ],
+    None,
+    None,
+]:
+    """Yields a stream of parsed XBRL data for files modified after the specified date."""
 
-        if 'JanToDec' in file_name_no_ext or 'JanuaryToDecember' in file_name_no_ext:
-            file_name_no_ext = os.path.splitext(url)[0]
-            year = file_name_no_ext[-4:]
+    def extract_start_end_dates(url: str) -> tuple[datetime.date, datetime.date] | tuple[None, None]:
+        file_name_no_ext = pathlib.Path(url).stem
+        if "JanToDec" in file_name_no_ext or "JanuaryToDecember" in file_name_no_ext:
+            year = pathlib.Path(url).stem[-4:]
             return datetime.date(int(year), 1, 1), datetime.date(int(year), 12, 31)
-        elif 'Accounts_Monthly_Data' in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
-            year = int(file_name_no_ext[-4:])
-            month_name = file_name_no_ext.split('-')[1][:-4]
+        if "Accounts_Monthly_Data" in file_name_no_ext and file_name_no_ext[-4:].isnumeric():
+            year_int = int(file_name_no_ext[-4:])
+            month_name = file_name_no_ext.split("-")[1][:-4]
             # Convert the month name to a month number
-            month_num = datetime.datetime.strptime(month_name, '%B').month
+            month_num = datetime.datetime.strptime(month_name, "%B").astimezone().month
             # Calculate the last date of the month
-            first_day_of_month = datetime.date(year, month_num, 1)
-            next_month = datetime.date(year, month_num, 28) + datetime.timedelta(days=4)
+            first_day_of_month = datetime.date(year_int, month_num, 1)
+            next_month = datetime.date(year_int, month_num, 28) + datetime.timedelta(days=4)
             last_day_of_month = next_month - datetime.timedelta(days=next_month.day)
             return (first_day_of_month, last_day_of_month)
-        elif 'Accounts_Bulk_Data' in file_name_no_ext:
-            date_str = file_name_no_ext.split('-', 1)[1]
-            day = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        if "Accounts_Bulk_Data" in file_name_no_ext:
+            date_str = file_name_no_ext.split("-", 1)[1]
+            day = datetime.datetime.strptime(date_str, "%Y-%m-%d").astimezone().date()
             return (day, day)
-        else:
-            return (None, None)
+        return (None, None)
 
-    def get_content(client, url):
+    def get_content(client: httpx.Client, url: str) -> bytes:
         r = client.get(url)
         r.raise_for_status()
         return r.content
 
     @contextmanager
-    def get_content_streamed(client, url):
+    def get_content_streamed(
+        client: httpx.Client, url: str
+    ) -> typing.Generator[typing.Generator[bytes, None, None], None, None]:
 
-        def get_chunks():
+        def get_chunks() -> typing.Generator[bytes, None, None]:
             start = 0
             end = chunk_size - 1
             etag = None
             remaining = None
 
             while remaining is None or remaining > 0:
-                with client.stream('GET', url, headers={
-                    'range': f'bytes={start}-{end}'
-                }) as r:
+                with client.stream("GET", url, headers={"range": f"bytes={start}-{end}"}) as r:
                     r.raise_for_status()
                     if etag is None:
-                        etag = r.headers['etag']
-                    else:
-                        if etag != r.headers['etag']:
-                            raise Exception('etag has changed since beginning requests')     
+                        etag = r.headers["etag"]
+                    elif etag != r.headers["etag"]:
+                        error_msg = "etag has changed since beginning requests"
+                        raise RuntimeError(error_msg)
                     if remaining is None:
-                        remaining = int(r.headers['content-range'].split('/')[1])
-                    content_length =int(r.headers['content-length'])
-                    assert content_length > 0
+                        remaining = int(r.headers["content-range"].split("/")[1])
+                    content_length = int(r.headers["content-length"])
+                    if not content_length > 0:
+                        error_msg = "content_length is <= 0"
+                        raise ValueError(error_msg)
                     remaining -= content_length
                     yield from r.iter_bytes(chunk_size=65536)
                 start += chunk_size
@@ -641,34 +747,25 @@ def stream_read_xbrl_sync(
             # open context in "get_chunks" gets properly closed, i.e. to close its open HTTP connection
             chunks.close()
 
-    dummy_list_to_ingest = [
-        (datetime.date(2021, 5, 2), (('1', '2'), ('3', '4'))),
-        (datetime.date(2022, 2, 8), (('5', '6'), ('7', '8'))),
-    ]
-
     with get_client() as client:
         pages_of_links = [
-            (data_url, BeautifulSoup(get_content(client, data_url), 'html.parser').find_all('a'))
+            (data_url, BeautifulSoup(get_content(client, data_url), "html.parser").find_all("a"))
             for data_url in data_urls
         ]
 
         all_zip_urls = [
-            link.attrs['href'].strip() if link.attrs['href'].strip().startswith('http://') or link.attrs['href'].strip().startswith('https://') else
-            urllib.parse.urljoin(data_url, link.attrs['href'].strip())
+            link_href.strip()
+            if link_href.strip().startswith("http://") or link_href.strip().startswith("https://")
+            else urllib.parse.urljoin(data_url, link_href.strip())
             for (data_url, page_of_links) in pages_of_links
             for link in page_of_links
-            if link.attrs.get('href', '').endswith('.zip')
+            if isinstance(link_href := link.attrs["href"], str) and link_href.endswith(".zip")
         ]
 
-        all_zip_urls_with_dates = [
-            (zip_url, extract_start_end_dates(zip_url))
-            for zip_url in all_zip_urls
-        ]
+        all_zip_urls_with_dates = [(zip_url, extract_start_end_dates(zip_url)) for zip_url in all_zip_urls]
 
         all_zip_urls_with_parseable_dates = [
-            (zip_url, dates)
-            for (zip_url, dates) in all_zip_urls_with_dates
-            if dates != (None, None)
+            (zip_url, dates) for (zip_url, dates) in all_zip_urls_with_dates if dates != (None, None)
         ]
 
         all_zip_urls_with_dates_oldest_first = sorted(
@@ -678,26 +775,31 @@ def stream_read_xbrl_sync(
         zip_urls_with_date_in_range_to_ingest = [
             (zip_url, (start_date, end_date))
             for (zip_url, (start_date, end_date)) in all_zip_urls_with_dates_oldest_first
-            if (start_date, end_date) != (None, None) and end_date > ingest_data_after_date
+            if (start_date is not None and end_date is not None) and end_date > ingest_data_after_date
         ]
 
-        def _final_date_and_rows():
+        def _final_date_and_rows() -> typing.Generator[
+            tuple[tuple[datetime.date, datetime.date], typing.Generator[XBRLRow, None, None]], None, None
+        ]:
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
-                with get_content_streamed(client, zip_url) as chunks:
-                    with stream_read_xbrl_zip(chunks, zip_url=zip_url) as (_, rows):
-                        yield (start_date, end_date), rows
+                with get_content_streamed(client, zip_url) as chunks, stream_read_xbrl_zip(chunks, zip_url=zip_url) as (
+                    _,
+                    rows,
+                ):
+                    yield (start_date, end_date), rows
 
         yield (_COLUMNS, _final_date_and_rows())
 
 
-def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
+def stream_read_xbrl_sync_s3_csv(s3_client: mypy_boto3_s3.S3Client, bucket_name: str, key_prefix: str) -> None:
+    """Synchronizes XBRL data to an S3 bucket as CSV files."""
 
-    def _to_file_like_obj(iterable):
-        chunk = b''
-        offset = 0
+    def _to_file_like_obj(iterable: typing.Generator[bytes, None, None]) -> typing.BinaryIO:
+        chunk = b""
+        offset: int = 0
         it = iter(iterable)
 
-        def up_to_iter(size):
+        def up_to_iter(size: float) -> typing.Generator[bytes, None, None]:
             nonlocal chunk, offset
 
             while size:
@@ -708,25 +810,28 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
                         break
                     else:
                         offset = 0
-                to_yield = min(size, len(chunk) - offset)
-                offset = offset + to_yield
+                to_yield = int(min(size, len(chunk) - offset))
+                offset += to_yield
                 size -= to_yield
                 yield chunk[offset - to_yield : offset]
 
-        class FileLikeObj(IOBase):
-            def readable(self):
+        class FileLikeObj(io.IOBase):
+            @staticmethod
+            def readable() -> bool:
                 return True
 
-            def read(self, size=-1):
-                return b''.join(
-                    up_to_iter(float('inf') if size is None or size < 0 else size)
-                )
+            @staticmethod
+            def read(size: float = -1) -> bytes:
+                return b"".join(up_to_iter(float("inf") if size is None or size < 0 else size))
 
-        return FileLikeObj()
+        return typing.cast("typing.BinaryIO", FileLikeObj())
 
-    def _convert_to_csv(columns, rows):
+    def _convert_to_csv(
+        columns: tuple[str, ...], rows: typing.Generator[XBRLRow, None, None]
+    ) -> typing.Generator[bytes, None, None]:
         class PseudoBuffer:
-            def write(self, value):
+            @staticmethod
+            def write(value: str) -> bytes:
                 return value.encode("utf-8")
 
         pseudo_buffer = PseudoBuffer()
@@ -734,38 +839,39 @@ def stream_read_xbrl_sync_s3_csv(s3_client, bucket_name, key_prefix):
         yield csv_writer.writerow(columns)
         yield from (csv_writer.writerow(row) for row in rows)
 
-    s3_paginator = s3_client.get_paginator('list_objects_v2')
+    s3_paginator = s3_client.get_paginator("list_objects_v2")
     dates = (
         # The -10: is to support older versions where only the end date was in the file name
-        datetime.date.fromisoformat(PurePosixPath(content['Key']).stem[-10:])
+        datetime.date.fromisoformat(pathlib.PurePosixPath(content["Key"]).stem[-10:])
         for page in s3_paginator.paginate(Bucket=bucket_name, Prefix=key_prefix)
-        for content in page.get('Contents', ())
+        for content in page.get("Contents", ())
     )
     latest_completed_date = max(dates, default=datetime.date(datetime.MINYEAR, 1, 1))
 
     with stream_read_xbrl_sync(latest_completed_date) as (columns, final_date_and_rows):
-        for ((start_date, final_date), rows) in final_date_and_rows:
-            key = f'{key_prefix}{start_date}--{final_date}.csv'
-            logger.info('Saving Companies House accounts data to %s/%s ...', bucket_name, key)
+        for (start_date, final_date), rows in final_date_and_rows:
+            key = f"{key_prefix}{start_date}--{final_date}.csv"
+            logger.info("Saving Companies House accounts data to %s/%s ...", bucket_name, key)
             csv_file = _to_file_like_obj(_convert_to_csv(columns, rows))
             s3_client.upload_fileobj(Bucket=bucket_name, Key=key, Fileobj=csv_file)
-            logger.info('Saving Companies House accounts data to %s/%s (done)', bucket_name, key)
+            logger.info("Saving Companies House accounts data to %s/%s (done)", bucket_name, key)
 
 
-def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_folder=".debug-cache"):
-    Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
+def stream_read_xbrl_debug(
+    zip_url: str, run_code: str, company_id: str, date: datetime.date, debug_cache_folder: str = ".debug-cache"
+) -> None:
+    """Debug function that extracts a specific XBRL file from a ZIP archive and prints info."""
+    pathlib.Path(debug_cache_folder).mkdir(parents=True, exist_ok=True)
 
     # Hashing so we have a filesystem-safe URL
-    hashed_zip_url = hashlib.sha256(zip_url.encode('utf-8')).hexdigest()
-    local_zip_file = Path(debug_cache_folder).joinpath(hashed_zip_url)
+    hashed_zip_url = hashlib.sha256(zip_url.encode("utf-8")).hexdigest()
+    local_zip_file = pathlib.Path(debug_cache_folder).joinpath(hashed_zip_url)
 
     if not local_zip_file.exists():
-        print('The ZIP', zip_url, 'does not exist in local cache. Downloading...', file=sys.stderr)
+        print("The ZIP", zip_url, "does not exist in local cache. Downloading...", file=sys.stderr)
         done = False
         try:
-            with \
-                    httpx.stream('GET', zip_url) as r, \
-                    open(local_zip_file, 'wb') as f:
+            with httpx.stream("GET", zip_url) as r, pathlib.Path.open(local_zip_file, "wb") as f:
                 r.raise_for_status()
                 for chunk in r.iter_bytes():
                     f.write(chunk)
@@ -773,39 +879,37 @@ def stream_read_xbrl_debug(zip_url, run_code, company_id, date, debug_cache_fold
         finally:
             if not done:
                 local_zip_file.unlink(missing_ok=True)
-        print('Downloaded', file=sys.stderr)
+        print("Downloaded", file=sys.stderr)
     else:
-        print('Found', zip_url, 'in local cache', file=sys.stderr)
+        print("Found", zip_url, "in local cache", file=sys.stderr)
 
-    def local_chunks():
-        with open(local_zip_file, 'rb') as f:
+    def local_chunks() -> typing.Generator[bytes, None, None]:
+        with pathlib.Path.open(local_zip_file, "rb") as f:
             while True:
                 chunk = f.read(65536)
                 if not chunk:
                     break
                 yield chunk
 
-    print('Searching ZIP for member file matching', run_code, company_id, date, file=sys.stderr)
+    print("Searching ZIP for member file matching", run_code, company_id, date, file=sys.stderr)
     found = False
     for name, _, chunks in stream_unzip(local_chunks()):
-        fn = os.path.basename(name.decode('utf-8'))
-        mo = re.match(r'^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)', fn)
+        fn = pathlib.Path(name.decode("utf-8")).name
+        mo = re.match(r"^(Prod\d+_\d+)_([^_]+)_(\d\d\d\d\d\d\d\d)\.(html|xml)", fn)
         if not mo:
-            logging.warning("Invalid file. Skipping: %s", fn)
-            return []
-        _run_code, _company_id, _date, _ = mo.groups()
-        # print(_run_code, _company_id, _date)
+            logger.warning("Invalid file. Skipping: %s", fn)
+            break
+        run_code_, company_id_, date_, _ = mo.groups()
 
-        if _run_code == run_code and _company_id == company_id and _date == date.isoformat().replace('-', ''):
-            print('Found matching file', name, file=sys.stderr)
+        if run_code_ == run_code and company_id_ == company_id and date_ == date.isoformat().replace("-", ""):
+            print("Found matching file", name, file=sys.stderr)
             found = True
             for chunk in chunks:
                 sys.stdout.buffer.write(chunk)
         else:
-            for chunk in chunks:
-                pass
+            collections.deque(chunks, maxlen=0)
 
     if not found:
-        print('No matching member file found', file=sys.stderr)
+        print("No matching member file found", file=sys.stderr)
 
-    print('Finished', file=sys.stderr)
+    print("Finished", file=sys.stderr)
