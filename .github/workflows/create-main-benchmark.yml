@@ -7,14 +7,15 @@ on:
 jobs:
   bench-main:
     permissions:
-        contents: write
-        pull-requests: write
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - uses: actions/setup-python@v4
         with:
           python-version: '3.13'
@@ -33,15 +34,26 @@ jobs:
           external-data-json-path: ".benchmarks/main-${{ github.run_id }}.json"
           save-data-file: true
       - name: Create PR with benchmark file
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           add-paths: .benchmarks/*.json
-          commit-message: "bench: add bench results for ${{ github.run_id }}"
-          sign-commits: true
+          commit-message: "bench: add bench results for ${{ github.run_id }} [skip ci]"
           branch: benchabot/add-main-benchmark
           delete-branch: true
           title: "benchabot: add main benchmark ${{ github.run_id }}"
           body: "Benchmark results for run ID-${{ github.run_id }}"
           base: main
-          draft: always-true
+      - name: Create empty commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "trigger ci synchronization [skip ci]"
+      - name: Force trigger PR Checks
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "bench: add bench results for ${{ github.run_id }}"
+          branch: benchabot/add-main-benchmark
+          delete-branch: false
+          title: "benchabot: add main benchmark ${{ github.run_id }}"
+          body: "Benchmark results for run ID-${{ github.run_id }}"
+          base: main
