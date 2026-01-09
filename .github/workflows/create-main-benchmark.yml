@@ -36,10 +36,11 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "bench: add bench results for ${{ github.run_id }} [skip ci]"
+          add-paths: .benchmarks/*.json
+          commit-message: "bench: add bench results for ${{ github.run_id }}"
           sign-commits: true
           branch: benchabot/add-main-benchmark
           delete-branch: true
-          title: "Benchmark results for run: ${{ github.run_id }}"
-          body: "Benchmark results for run: ${{ github.run_id }}"
+          title: "bot: add main benchmark ${{ github.run_id }}"
+          body: "Benchmark results for run ID-${{ github.run_id }}"
           base: main
