@@ -20,21 +20,25 @@ jobs:
           cache: 'pip'
       - name: Install dependencies
         run: pip install -e ".[dev]"
+      - name: Run benchmark
+        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json main-raw.json
       - name: Create benchmark dir
         run: mkdir -p .benchmarks
-      - name: Run benchmark
-        env:
-            ID: ${{ github.run_id }}
-        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json ".benchmarks/main-raw-$ID.json"
       - name: Parse and save benchmark
         uses: benchmark-action/github-action-benchmark@v1
         with:
           tool: 'pytest'
-          output-file-path: ".benchmarks/main-raw-${{ github.run_id }}.json"
+          output-file-path: main-raw.json
           external-data-json-path: ".benchmarks/main-${{ github.run_id }}.json"
           save-data-file: true
-      - name: Commit benchmark files
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Create PR with benchmark file
+        uses: peter-evans/create-pull-request@v7
         with:
-          commit_message: "bench: add bench results for ${{ github.run_id }} [skip ci]"
-          file_pattern: '.benchmarks/*.json'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "bench: add bench results for ${{ github.run_id }} [skip ci]"
+          sign-commits: true
+          branch: benchabot/add-main-benchmark
+          delete-branch: true
+          title: "Benchmark results for run: ${{ github.run_id }}"
+          body: "Benchmark results for run: ${{ github.run_id }}"
+          base: main
