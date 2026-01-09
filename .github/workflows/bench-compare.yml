@@ -1,0 +1,43 @@
+name: Compare PR benchmark with main
+
+on:
+  pull_request:
+
+jobs:
+  bench-compare:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run benchmark
+        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json benchmark.json
+      - name: Get latest main benchmark
+        id: main-bench
+        run: |
+          LATEST=$(ls -t .benchmarks/main-*.json | grep -v "raw" | head -n 1)
+          echo "Using bench: $LATEST"
+          echo "file=$LATEST" >> $GITHUB_OUTPUT
+
+      - name: Compare benchmarks
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: benchmark.json
+          external-data-json-path: "${{ steps.main-bench.outputs.file }}"
+          save-data-file: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-always: true
+          summary-always: true
+          comment-on-alert: true
+          alert-threshold: "105%"
