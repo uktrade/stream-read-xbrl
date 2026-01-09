@@ -41,6 +41,7 @@ jobs:
           sign-commits: true
           branch: benchabot/add-main-benchmark
           delete-branch: true
-          title: "bot: add main benchmark ${{ github.run_id }}"
+          title: "benchabot: add main benchmark ${{ github.run_id }}"
           body: "Benchmark results for run ID-${{ github.run_id }}"
           base: main
+          draft: always-true
