@@ -1,0 +1,40 @@
+name: Create and store main benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bench-main:
+    permissions:
+        contents: write
+        pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Create benchmark dir
+        run: mkdir -p .benchmarks
+      - name: Run benchmark
+        env:
+            ID: ${{ github.run_id }}
+        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json ".benchmarks/main-raw-$ID.json"
+      - name: Parse and save benchmark
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: ".benchmarks/main-raw-${{ github.run_id }}.json"
+          external-data-json-path: ".benchmarks/main-${{ github.run_id }}.json"
+          save-data-file: true
+      - name: Commit benchmark files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "bench: add bench results for ${{ github.run_id }} [skip ci]"
+          file_pattern: '.benchmarks/*.json'
