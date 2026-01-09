@@ -1,0 +1,59 @@
+name: Create and store main benchmark
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  bench-main:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run benchmark
+        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json main-raw.json
+      - name: Create benchmark dir
+        run: mkdir -p .benchmarks
+      - name: Parse and save benchmark
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: main-raw.json
+          external-data-json-path: ".benchmarks/main-${{ github.run_id }}.json"
+          save-data-file: true
+      - name: Create PR with benchmark file
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: .benchmarks/*.json
+          commit-message: "bench: add bench results for ${{ github.run_id }} [skip ci]"
+          branch: benchabot/add-main-benchmark
+          delete-branch: true
+          title: "benchabot: add main benchmark ${{ github.run_id }}"
+          body: "Benchmark results for run ID-${{ github.run_id }}"
+          base: main
+      - name: Create empty commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "trigger ci synchronization [skip ci]"
+      - name: Force trigger PR Checks
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "bench: add bench results for ${{ github.run_id }}"
+          branch: benchabot/add-main-benchmark
+          delete-branch: false
+          title: "benchabot: add main benchmark ${{ github.run_id }}"
+          body: "Benchmark results for run ID-${{ github.run_id }}"
+          base: main
