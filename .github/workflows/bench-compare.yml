@@ -14,21 +14,19 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v7
         with:
+          version: "0.9.24"
           python-version: '3.13'
-          cache: 'pip'
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
+          enable-cache: true
       - name: Run benchmark
-        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json benchmark.json
+        run: uv run pytest --benchmark-enable --benchmark-only --benchmark-json benchmark.json
       - name: Get latest main benchmark
         id: main-bench
         run: |
           LATEST=$(ls -t .benchmarks/main-*.json | grep -v "raw" | head -n 1)
           echo "Using bench: $LATEST"
           echo "file=$LATEST" >> $GITHUB_OUTPUT
-
       - name: Compare benchmarks
         uses: benchmark-action/github-action-benchmark@v1
         with:
