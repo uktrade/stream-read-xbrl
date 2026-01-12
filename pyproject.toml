@@ -65,6 +65,7 @@ dev = [
     "moto[s3]>=5.1.19",
     "mypy>=1.19.1",
     "mypy-boto3-s3>=1.42.21",
+    "nodeenv>=1.10.0",
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
     "pytest-benchmark>=5.2.3",
