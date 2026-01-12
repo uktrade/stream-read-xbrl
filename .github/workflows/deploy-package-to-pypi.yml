@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -37,7 +39,10 @@ jobs:
       id-token: write
     steps:
       - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: ./dist
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages_dir: dist/
+          packages-dir: dist/
