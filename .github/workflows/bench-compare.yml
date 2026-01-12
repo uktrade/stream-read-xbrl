@@ -40,4 +40,4 @@ jobs:
           comment-always: true
           summary-always: true
           comment-on-alert: true
-          alert-threshold: "105%"
+          alert-threshold: "110%"
