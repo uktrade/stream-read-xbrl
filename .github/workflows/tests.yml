@@ -26,24 +26,26 @@ jobs:
           - "3.13"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: '${{ matrix.python-version }}'
-          cache: 'pip'
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
+          version: "0.9.24"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
       - name: Check with pre-commit
         env:
           SKIP: validate-security-scan, run-security-scan, ruff-check, ruff-format, mypy-check
-        run: pre-commit run -a
+        run: uv run pre-commit run -a
       - name: Lint with Ruff
-        run:  python -m ruff check .
+        run:  uv run ruff check .
       - name: Format with Ruff
-        run:  python -m ruff format .
+        run:  uv run ruff format .
       - name: Type check with mypy
-        run:  python -m mypy .
+        run:  uv run mypy .
       - name: Test with pytest
-        run:  python -m pytest --benchmark-skip
+        run:  uv run pytest --benchmark-skip
+      - name: Post uv
+        run: uv cache prune --ci
