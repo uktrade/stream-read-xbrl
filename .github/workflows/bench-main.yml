@@ -1,0 +1,48 @@
+name: Create and store main benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bench-main:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Set outputs
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run benchmark
+        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json main-raw.json
+      - name: Create benchmark dir
+        run: mkdir -p .benchmarks
+      - name: Parse and save benchmark
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: main-raw.json
+          external-data-json-path: ".benchmarks/main-${{ steps.vars.outputs.sha_short }}.json"
+          save-data-file: true
+      - name: Create PR with benchmark file
+        uses: peter-evans/create-pull-request@v8
+        with:
+          add-paths: .benchmarks/*.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "bench: add bench results for ${{ steps.vars.outputs.sha_short }}"
+          sign-commits: true
+          branch: benchabot/add-main-benchmark
+          delete-branch: true
+          title: "benchabot: add main benchmark for commit ${{ steps.vars.outputs.sha_short }}"
+          body: "Benchmark results for commit ${{ steps.vars.outputs.sha_short }}.\n\nTo get CI to activate please manually close and reopen the PR."
+          base: main
