@@ -59,7 +59,8 @@ You should not fork the repository if you're a member of uktrade.
 
 ## Contributing documentation
 
-The source of the documentation is in the [docs/](https://github.com/uktrade/stream-read-xbrl/tree/main/docs) directory of the source code, and is written using [Material for mkdocs](https://squidfunk.github.io/mkdocs-material/).
+The source of the documentation is in the [docs/](https://github.com/uktrade/stream-read-xbrl/tree/main/docs) directory
+of the source code, and is written using [Eleventy](https://www.11ty.dev/) with the [govuk plugin](https://github.com/x-govuk/govuk-eleventy-plugin).
 
 Changes are then submitted via a Pull Request (PR). To do this:
 
@@ -72,16 +73,29 @@ Changes are then submitted via a Pull Request (PR). To do this:
     cd stream-read-xbrl
     ```
     
-3. Make your changes in a text editor.
+3. Make your changes in a text editor or an IDE.
 
-4. Preview your changes locally.
+4. Install uv if not already installed locally.
+
+    For macOS and Linux:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+    For Windows:
+    ```bash
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+
+5. Preview your changes locally.
 
     ```bash
-    pip install -r requirements-docs.txt  # Only needed once
-    mkdocs serve
+    uv sync    # Only needed once
+    nodeenv -p # Only needed once
+    npm ci
+    npx @11ty/eleventy --serve
     ```
     
-5. Commit your change and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
+6. Commit your change and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
 
     ```bash
     git add docs/getting-started.md  # Repeat for each file changed
@@ -89,9 +103,9 @@ Changes are then submitted via a Pull Request (PR). To do this:
     gir push origin docs/add-example
     ```
     
-6. Raise a PR at [https://github.com/uktrade/stream-read-xbrl/pulls](https://github.com/uktrade/stream-read-xbrl/pulls) against the main branch in stream-unzip.
+7. Raise a PR at [https://github.com/uktrade/stream-read-xbrl/pulls](https://github.com/uktrade/stream-read-xbrl/pulls) against the main branch in stream-unzip.
 
-7. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.
+8. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.
 
 When the PR is merged, the documentation is deployed automatically to [https://stream-read-xbrl.docs.trade.gov.uk/](https://stream-read-xbrl.docs.trade.gov.uk/).
 
@@ -111,28 +125,40 @@ Changes are then submitted via a Pull Request (PR). To do this:
     ```bash
     git checkout -b fix-a-bug-description
     ```
-    
-3. Make sure you can run existing tests locally
+
+3. Install uv if not already installed locally.
+
+    For macOS and Linux:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+    For Windows:
+    ```bash
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+
+4. Make sure you can run existing tests locally
 
     ```bash
-    pip install -e ".[dev]"  # Only needed once
-    pytest
+    uv sync      # Only needed once
+    uv run pytest
     ```
     
-4. Make your changes in a text editor. In the cases of changing behaviour, this would usually include changing or adding at least one test in [test_stream_read_xbrl.py](https://github.com/uktrade/stream-unzip/blob/main/test_stream_read_xbrl.py), and running them.
+5. Make your changes in a text editor or and IDE. In the cases of changing behaviour, this would usually include changing or adding at least one test in [test_stream_read_xbrl.py](https://github.com/uktrade/stream-unzip/blob/main/test_stream_read_xbrl.py), and running them.
 
     ```bash
-    pytest
+    uv run pytest
     ```
     
-5. Commit your changes and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
+6. Commit your changes and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
 
     ```bash
+    uv run pre-commit install --install-hooks --overwrite -t commit-msg -t pre-commit # Only needed once
     git add stream_zip.py  # Repeat for each file changed
     git commit -m "feat: the bug description"
     git push origin fix/the-bug-description
     ```
     
-6. Raise a PR at https://github.com/uktrade/stream-read-xbrl/pulls(https://github.com/uktrade/stream-read-xbrl/pulls) against the main branch in stream-read-xbrl.
+7. Raise a PR at [https://github.com/uktrade/stream-read-xbrl/pulls(https://github.com/uktrade/stream-read-xbrl/pulls)](https://github.com/uktrade/stream-read-xbrl/pulls(https://github.com/uktrade/stream-read-xbrl/pulls)) against the main branch in stream-read-xbrl.
 
-7. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.
+8. Wait for the PR to be approved and merged, and respond to any questions or suggested changes.
