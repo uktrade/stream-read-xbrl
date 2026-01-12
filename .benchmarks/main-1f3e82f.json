@@ -1,0 +1,79 @@
+{
+  "lastUpdate": 1768243264665,
+  "repoUrl": "https://github.com/uktrade/stream-read-xbrl",
+  "entries": {
+    "Benchmark": [
+      {
+        "commit": {
+          "author": {
+            "name": "Jack Swerdlow",
+            "username": "JackSwerdlow",
+            "email": "77803087+JackSwerdlow@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "1f3e82f7a1661ad0b2e2c0329c7c40f0cd0cc6a7",
+          "message": "refactor: use uv for dependency management (#234)\n\n* chore: update pyproject.toml\n\nSigned-off-by: DBT pre-commit check\n\n* add uv.lock\n\nSigned-off-by: DBT pre-commit check\n\n* chore: bump dependencies\n\nSigned-off-by: DBT pre-commit check\n\n* fix: upgrade pytest and fix tests broken by upgrade\n\nSigned-off-by: DBT pre-commit check\n\n* refactor: change tests workflow to use uv\n\nSigned-off-by: DBT pre-commit check\n\n* refactor: change bench workflows to use uv\n\nSigned-off-by: DBT pre-commit check\n\n* refactor: change deploy workflows to use uv\n\nSigned-off-by: DBT pre-commit check\n\n* chore: add _site and node_modules to .gitignore\n\nSigned-off-by: DBT pre-commit check\n\n* add nodeenv to dev dependencies\n\nSigned-off-by: DBT pre-commit check\n\n* update docs\n\nSigned-off-by: DBT pre-commit check\n\n* feat: automate version bump on release\n\nSigned-off-by: DBT pre-commit check\n\n---------\n\nSigned-off-by: DBT pre-commit check",
+          "timestamp": "2026-01-12T18:31:48Z",
+          "url": "https://github.com/uktrade/stream-read-xbrl/commit/1f3e82f7a1661ad0b2e2c0329c7c40f0cd0cc6a7"
+        },
+        "date": 1768243264664,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "test_stream_read_xbrl.py::TestSteamReadXbrlZip::test_bench_stream_read_xbrl_zip",
+            "value": 1985580.3727908449,
+            "unit": "iter/sec",
+            "range": "stddev: 5.127774812005259e-8",
+            "extra": "mean: 503.63108625738676 nsec\nrounds: 170911"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestSkipInvalidFiles::test_bench_skip_invalid_files",
+            "value": 1993955.3874376873,
+            "unit": "iter/sec",
+            "range": "stddev: 5.432419398109899e-8",
+            "extra": "mean: 501.51573415343057 nsec\nrounds: 171204"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSync::test_bench_stream_read_xbrl_sync_default",
+            "value": 14.164013807864405,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0027013113187226542",
+            "extra": "mean: 70.60145616666665 msec\nrounds: 12"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSync::test_bench_stream_read_xbrl_sync_not_end_of_month",
+            "value": 25.267443817889742,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011874233558867217",
+            "extra": "mean: 39.57661911538454 msec\nrounds: 26"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSync::test_bench_stream_read_xbrl_sync_end_of_month",
+            "value": 41.156413252333486,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009205224609107378",
+            "extra": "mean: 24.297549785714182 msec\nrounds: 42"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSyncS3Csv::test_bench_stream_read_xbrl_sync_s3_csv",
+            "value": 101.37010708273412,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000216999364140223",
+            "extra": "mean: 9.864841113207476 msec\nrounds: 106"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestDebug::test_bench_debug",
+            "value": 604.4114293815388,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00003222937926898307",
+            "extra": "mean: 1.6545021344537532 msec\nrounds: 119"
+          }
+        ]
+      }
+    ]
+  }
+}
