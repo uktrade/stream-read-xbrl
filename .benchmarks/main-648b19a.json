@@ -1,0 +1,79 @@
+{
+  "lastUpdate": 1768222722216,
+  "repoUrl": "https://github.com/uktrade/stream-read-xbrl",
+  "entries": {
+    "Benchmark": [
+      {
+        "commit": {
+          "author": {
+            "name": "Jack Swerdlow",
+            "username": "JackSwerdlow",
+            "email": "77803087+JackSwerdlow@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "648b19a6d3916040241e83989034677eeeddef82",
+          "message": "fix: add extra inputs to benchmark-action step (#230)\n\nSigned-off-by: DBT pre-commit check",
+          "timestamp": "2026-01-12T12:56:56Z",
+          "url": "https://github.com/uktrade/stream-read-xbrl/commit/648b19a6d3916040241e83989034677eeeddef82"
+        },
+        "date": 1768222722215,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "test_stream_read_xbrl.py::TestSteamReadXbrlZip::test_bench_stream_read_xbrl_zip",
+            "value": 1255233.5076991753,
+            "unit": "iter/sec",
+            "range": "stddev: 8.217632107825769e-8",
+            "extra": "mean: 796.6645200803996 nsec\nrounds: 129803"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestSkipInvalidFiles::test_bench_skip_invalid_files",
+            "value": 1253001.1272173189,
+            "unit": "iter/sec",
+            "range": "stddev: 8.458168397230594e-8",
+            "extra": "mean: 798.0838789992255 nsec\nrounds: 131338"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSync::test_bench_stream_read_xbrl_sync_default",
+            "value": 11.165225180683233,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007675493912085805",
+            "extra": "mean: 89.56380044444451 msec\nrounds: 9"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSync::test_bench_stream_read_xbrl_sync_not_end_of_month",
+            "value": 16.75874000668306,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002082207520333416",
+            "extra": "mean: 59.670357055555456 msec\nrounds: 18"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSync::test_bench_stream_read_xbrl_sync_end_of_month",
+            "value": 23.294748263418942,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009217285290204116",
+            "extra": "mean: 42.92813078260891 msec\nrounds: 23"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestStreamReadXbrlSyncS3Csv::test_bench_stream_read_xbrl_sync_s3_csv",
+            "value": 36.95863948122437,
+            "unit": "iter/sec",
+            "range": "stddev: 0.008078193966523463",
+            "extra": "mean: 27.057273050000052 msec\nrounds: 40"
+          },
+          {
+            "name": "test_stream_read_xbrl.py::TestDebug::test_bench_debug",
+            "value": 594.5422668407251,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000025442766986689107",
+            "extra": "mean: 1.6819662045455466 msec\nrounds: 44"
+          }
+        ]
+      }
+    ]
+  }
+}
