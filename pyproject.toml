@@ -66,8 +66,8 @@ dev = [
     "mypy>=1.19.1",
     "mypy-boto3-s3>=1.42.21",
     "pre-commit>=4.3.0",
-    "pytest>=7.2.1,<8",  # Some tests fail on v8, not found quite why
-    "pytest-benchmark>=4.0,<5.0", # In line with the pytest>=7.2.1,<8 requirement
+    "pytest>=8.4.2",
+    "pytest-benchmark>=5.2.3",
     "pytest-httpx>=0.30.0",
     "ruff>=0.14.11",
     "stream-zip>=0.0.83",

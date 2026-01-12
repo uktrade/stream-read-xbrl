@@ -570,15 +570,11 @@ def get_expected_data(zip_url: str | None) -> tuple[dict[str, typing.Any], ...]:
 
 
 @pytest.fixture
-def assert_all_responses_were_requested() -> bool:
-    return False
-
-
-@pytest.fixture
 def mock_companies_house_daily_zip(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
+            is_reusable=True,
             url="https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip",
             content=content,
             headers={
@@ -594,6 +590,7 @@ def mock_companies_house_monthly_zip(httpx_mock: pytest_httpx.HTTPXMock) -> None
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
+            is_reusable=True,
             url="https://download.companieshouse.gov.uk/Accounts_Monthly_Data-July2022.zip",
             content=content,
             headers={
@@ -609,6 +606,7 @@ def mock_companies_house_historic_zip_2008(httpx_mock: pytest_httpx.HTTPXMock) -
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
+            is_reusable=True,
             url="https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanuaryToDecember2008.zip",
             content=content,
             headers={
@@ -624,6 +622,7 @@ def mock_companies_house_historic_zip_2009(httpx_mock: pytest_httpx.HTTPXMock) -
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
+            is_reusable=True,
             url="https://download.companieshouse.gov.uk/Accounts_Monthly_Data-JanToDec2009.zip",
             content=content,
             headers={
@@ -638,6 +637,7 @@ def mock_companies_house_historic_zip_2009(httpx_mock: pytest_httpx.HTTPXMock) -
 def mock_companies_house_daily_zip_404(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2023-03-02.zip", "rb"):
         httpx_mock.add_response(
+            is_reusable=True,
             url="https://download.companieshouse.gov.uk/does-not-exist.zip",
             status_code=404,
         )
@@ -646,6 +646,7 @@ def mock_companies_house_daily_zip_404(httpx_mock: pytest_httpx.HTTPXMock) -> No
 @pytest.fixture
 def mock_companies_house_daily_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     httpx_mock.add_response(
+        is_reusable=True,
         url="https://download.companieshouse.gov.uk/en_accountsdata.html",
         content=b"""
             <a href="Accounts_Bulk_Data-2023-03-02.zip">Link</a>
@@ -657,6 +658,7 @@ def mock_companies_house_daily_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
 @pytest.fixture
 def mock_companies_house_monthly_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     httpx_mock.add_response(
+        is_reusable=True,
         url="https://download.companieshouse.gov.uk/en_monthlyaccountsdata.html",
         content=b"""
             <a href="Accounts_Monthly_Data-July2022.zip">Link</a>
@@ -668,6 +670,7 @@ def mock_companies_house_monthly_html(httpx_mock: pytest_httpx.HTTPXMock) -> Non
 @pytest.fixture
 def mock_companies_house_historic_html(httpx_mock: pytest_httpx.HTTPXMock) -> None:
     httpx_mock.add_response(
+        is_reusable=True,
         url="https://download.companieshouse.gov.uk/historicmonthlyaccountsdata.html",
         content=b"""
             <a href="Accounts_Monthly_Data-JanuaryToDecember2008.zip">Link</a>
@@ -682,6 +685,7 @@ def mock_companies_house_invalid_inner_zip(httpx_mock: pytest_httpx.HTTPXMock) -
     with pathlib.Path.open(BASE_DIR / "fixtures/Accounts_Bulk_Data-2025-05-03.zip", "rb") as f:
         content = f.read()
         httpx_mock.add_response(
+            is_reusable=True,
             url="https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip",
             content=content,
             headers={
@@ -697,9 +701,10 @@ def mock_companies_house_invalid_inner_zip(httpx_mock: pytest_httpx.HTTPXMock) -
 class TestSteamReadXbrlZip:
     @staticmethod
     def test_stream_read_xbrl_zip() -> None:
-        with httpx.stream(
-            "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip"
-        ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
+        with (
+            httpx.stream("GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip") as r,
+            stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows),
+        ):
             assert tuple(dict(zip(columns, row)) for row in rows) == get_expected_data(None)
 
     @staticmethod
@@ -713,9 +718,10 @@ class TestSteamReadXbrlZip:
 class TestSkipInvalidFiles:
     @staticmethod
     def test_skip_invalid_files() -> None:
-        with httpx.stream(
-            "GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip"
-        ) as r, stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows):
+        with (
+            httpx.stream("GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip") as r,
+            stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows),
+        ):
             assert tuple(dict(zip(columns, row)) for row in rows) != get_expected_data(None)
 
     @staticmethod
@@ -733,6 +739,7 @@ class TestSkipInvalidFiles:
     "mock_companies_house_historic_zip_2008",
     "mock_companies_house_historic_zip_2009",
 )
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 @pytest.mark.benchmark(group="TestStreamReadXbrlSync", warmup=False)
 class TestStreamReadXbrlSync:
     @staticmethod
@@ -822,6 +829,7 @@ class TestStreamReadXbrlSync:
     "mock_companies_house_historic_zip_2008",
     "mock_companies_house_historic_zip_2009",
 )
+@pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 @pytest.mark.benchmark(group="TestStreamReadXbrlSyncS3Csv", warmup=True)
 class TestStreamReadXbrlSyncS3Csv:
     @staticmethod
