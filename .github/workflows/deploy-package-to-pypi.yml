@@ -7,12 +7,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.head_ref }}
+          ref: main
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.13"
@@ -22,11 +20,6 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           uv version "$VERSION"
           uv lock
-      - name: Commit version bump
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: "chore: bump version to ${{ github.ref_name }} [skip ci]"
-          file_pattern: "pyproject.toml uv.lock"
       - name: Build
         run: uv build
       - uses: actions/upload-artifact@v6
