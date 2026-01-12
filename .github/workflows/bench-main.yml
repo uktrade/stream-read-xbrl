@@ -17,14 +17,13 @@ jobs:
       - name: Set outputs
         id: vars
         run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - uses: actions/setup-python@v6
+      - uses: astral-sh/setup-uv@v7
         with:
+          version: "0.9.24"
           python-version: '3.13'
-          cache: 'pip'
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
+          enable-cache: true
       - name: Run benchmark
-        run: python -m pytest --benchmark-enable --benchmark-only --benchmark-json main-raw.json
+        run: uv run pytest --benchmark-enable --benchmark-only --benchmark-json main-raw.json
       - name: Create benchmark dir
         run: mkdir -p .benchmarks
       - name: Parse and save benchmark

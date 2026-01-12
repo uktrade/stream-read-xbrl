@@ -7,7 +7,7 @@ title: Get started
 
 ## Prerequisites
 
-Python 3.7+
+Python 3.9+
 
 ## Installation
 
@@ -19,7 +19,7 @@ pip install stream-read-xbrl
 
 This installs the latest version of stream-read-xbrl, and the latest compatible version of all of its dependencies.
 
-If you regularly install stream-read-xbrl, such as during application deployment, to avoid unexpected changes as new versions are released, you can pin to specific versions. [Poetry](https://python-poetry.org/) or [pip-tools](https://pip-tools.readthedocs.io/en/latest/) are popular tools that can be used for this.
+If you regularly install stream-read-xbrl, such as during application deployment, to avoid unexpected changes as new versions are released, you can pin to specific versions. [Poetry](https://python-poetry.org/), [pip-tools](https://pip-tools.readthedocs.io/en/latest/) or [uv](https://docs.astral.sh/uv/) are popular tools that can be used for this.
 
 
 ## Usage
