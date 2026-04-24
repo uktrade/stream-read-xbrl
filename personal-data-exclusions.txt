@@ -1,0 +1,6 @@
+CONTRIBUTING.md
+pyproject.toml
+test_stream_read_xbrl.py
+.benchmarks/main-1f3e82f.json
+.benchmarks/main-648b19a.json
+docs/contributing.md
