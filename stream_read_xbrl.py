@@ -98,7 +98,13 @@ def _xbrl_to_rows(
         text: str,
         parser: collections.abc.Callable[[Element, str], typing.Any],
     ) -> decimal.Decimal | None:
-        return parser(element, text.strip()) if text and text.strip() not in {"", "-", "—"} else None
+        null_value_markers = {
+            "",
+            "\u002d",  # Hyphen-Minus (ASCII)
+            "\u2013",  # En dash
+            "\u2014",  # Em dash
+        }
+        return parser(element, text.strip()) if text and text.strip() not in null_value_markers else None
 
     def _parse_str(_element: Element, text: str) -> str:
         return str(text).replace("\n", " ").replace('"', "")
@@ -782,9 +788,12 @@ def stream_read_xbrl_sync(
             tuple[tuple[datetime.date, datetime.date], typing.Generator[XBRLRow, None, None]], None, None
         ]:
             for zip_url, (start_date, end_date) in zip_urls_with_date_in_range_to_ingest:
-                with get_content_streamed(client, zip_url) as chunks, stream_read_xbrl_zip(chunks, zip_url=zip_url) as (
-                    _,
-                    rows,
+                with (
+                    get_content_streamed(client, zip_url) as chunks,
+                    stream_read_xbrl_zip(chunks, zip_url=zip_url) as (
+                        _,
+                        rows,
+                    ),
                 ):
                     yield (start_date, end_date), rows
 
