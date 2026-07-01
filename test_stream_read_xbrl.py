@@ -1322,8 +1322,15 @@ def test_multi_valued_cell() -> None:
         ]
 
 
-def test_parsing_decimal_emdash() -> None:
-    html = b"""
+dashes = [
+    "\u2013",  # En dash
+    "\u2014",  # Em dash
+]
+
+
+@pytest.mark.parametrize("dash", dashes)
+def test_parsing_decimal_dashes(dash: str) -> None:
+    html = f"""
         <html>
             <ix:resources xmlns:ix="http://www.xbrl.org/2008/inlineXBRL">
                 <xbrli:context xmlns:xbrli="http://www.xbrl.org/2003/instance" id="c-1">
@@ -1343,10 +1350,10 @@ def test_parsing_decimal_emdash() -> None:
                 decimals="0"
                 name="core:TurnoverRevenue"
                 format="ixt:zerodash">
-                &#8212;
+                {dash}
             </ix:nonFraction>
         </html>
-    """
+    """.encode()
 
     member_files = (
         (
