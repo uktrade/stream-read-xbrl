@@ -39,7 +39,7 @@ addopts = [
 name = "stream-read-xbrl"
 version = "0.0.0.dev0"
 authors = [
-  { name="Department for Business and Trade", email="sre@digital.trade.gov.uk" },
+  { name="Department for Business and Trade", email="sre@businessandtrade.gov.uk" },
 ]
 description = "Python package to parse Companies House accounts data in a streaming way"
 readme = "README.md"
