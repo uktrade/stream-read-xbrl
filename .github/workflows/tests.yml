@@ -2,9 +2,15 @@ name: Tests
 
 on:
   pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'package-lock.json'
   push:
     branches:
       - main
+    paths-ignore:
+      - 'package-lock.json'
 
 jobs:
   test:
