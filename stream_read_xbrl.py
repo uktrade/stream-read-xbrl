@@ -1,7 +1,5 @@
 """Main classes, functions and code for stream-read-xbrl."""
 
-from __future__ import annotations
-
 import collections
 import collections.abc
 import concurrent.futures
@@ -25,12 +23,10 @@ from itertools import chain
 import dateutil.parser
 import httpx
 import lxml.etree
+import mypy_boto3_s3
 from bs4 import BeautifulSoup
+from lxml.etree import _Element as Element
 from stream_unzip import stream_unzip
-
-if typing.TYPE_CHECKING:
-    import mypy_boto3_s3
-    from lxml.etree import _Element as Element
 
 _COLUMNS = (
     "run_code",
@@ -76,7 +72,7 @@ _COLUMNS = (
 
 logger = logging.getLogger(__name__)
 
-XBRLData = typing.Union[str, bool, decimal.Decimal, datetime.date, None]
+XBRLData = str | bool | decimal.Decimal | datetime.date | None
 XBRLRow = tuple[XBRLData, ...]
 
 
@@ -515,14 +511,14 @@ def _xbrl_to_rows(
 
     def tag_name_tests(
         local_name: str,
-    ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]]]:
+    ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]], None, None]:
         tag_name_test = tag_name_test_dict.get(local_name)
         if tag_name_test is not None:
             yield from (tag_name_test,)
 
     def attribute_value_tests(
         attribute_value: str,
-    ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]]]:
+    ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]], None, None]:
         attribute_value_test = attribute_value_test_dict.get(attribute_value)
         if attribute_value_test is not None:
             yield from (attribute_value_test,)
