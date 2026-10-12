@@ -1,7 +1,5 @@
 """Main classes, functions and code for stream-read-xbrl."""
 
-from __future__ import annotations
-
 import collections
 import collections.abc
 import concurrent.futures
@@ -25,12 +23,10 @@ from itertools import chain
 import dateutil.parser
 import httpx
 import lxml.etree
+import mypy_boto3_s3
 from bs4 import BeautifulSoup
+from lxml.etree import _Element as Element
 from stream_unzip import stream_unzip
-
-if typing.TYPE_CHECKING:
-    import mypy_boto3_s3
-    from lxml.etree import _Element as Element
 
 _COLUMNS = (
     "run_code",
@@ -76,7 +72,7 @@ _COLUMNS = (
 
 logger = logging.getLogger(__name__)
 
-XBRLData = typing.Union[str, bool, decimal.Decimal, datetime.date, None]
+XBRLData = str | bool | decimal.Decimal | datetime.date | None
 XBRLRow = tuple[XBRLData, ...]
 
 

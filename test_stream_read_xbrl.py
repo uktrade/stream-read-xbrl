@@ -705,7 +705,7 @@ class TestSteamReadXbrlZip:
             httpx.stream("GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2023-03-02.zip") as r,
             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows),
         ):
-            assert tuple(dict(zip(columns, row)) for row in rows) == get_expected_data(None)
+            assert tuple(dict(zip(columns, row, strict=True)) for row in rows) == get_expected_data(None)
 
     @staticmethod
     def test_bench_stream_read_xbrl_zip(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
@@ -722,7 +722,7 @@ class TestSkipInvalidFiles:
             httpx.stream("GET", "https://download.companieshouse.gov.uk/Accounts_Bulk_Data-2025-05-03.zip") as r,
             stream_read_xbrl_zip(r.iter_bytes(chunk_size=65536)) as (columns, rows),
         ):
-            assert tuple(dict(zip(columns, row)) for row in rows) != get_expected_data(None)
+            assert tuple(dict(zip(columns, row, strict=True)) for row in rows) != get_expected_data(None)
 
     @staticmethod
     def test_bench_skip_invalid_files(benchmark: pytest_benchmark.fixture.BenchmarkFixture) -> None:
@@ -746,7 +746,7 @@ class TestStreamReadXbrlSync:
     def test_stream_read_xbrl_sync_default() -> None:
         with stream_read_xbrl_sync() as (columns, date_range_and_rows):
             assert tuple(
-                (date_range, tuple(dict(zip(columns, row)) for row in rows))
+                (date_range, tuple(dict(zip(columns, row, strict=True)) for row in rows))
                 for (date_range, rows) in date_range_and_rows
             ) == (
                 (
@@ -773,7 +773,7 @@ class TestStreamReadXbrlSync:
     def test_stream_read_xbrl_sync_not_end_of_month() -> None:
         with stream_read_xbrl_sync(date(2022, 7, 30)) as (columns, date_range_and_rows):
             assert tuple(
-                (date_range, tuple(dict(zip(columns, row)) for row in rows))
+                (date_range, tuple(dict(zip(columns, row, strict=True)) for row in rows))
                 for (date_range, rows) in date_range_and_rows
             ) == (
                 (
@@ -790,7 +790,7 @@ class TestStreamReadXbrlSync:
     def test_stream_read_xbrl_sync_end_of_month() -> None:
         with stream_read_xbrl_sync(date(2022, 7, 31)) as (columns, date_range_and_rows):
             assert tuple(
-                (date_range, tuple(dict(zip(columns, row)) for row in rows))
+                (date_range, tuple(dict(zip(columns, row, strict=True)) for row in rows))
                 for (date_range, rows) in date_range_and_rows
             ) == (
                 (
@@ -985,7 +985,7 @@ def test_entity_current_legal_name_in_span() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["entity_current_legal_name"] == "The name"
+        assert dict(zip(columns, row, strict=True))["entity_current_legal_name"] == "The name"
 
 
 def test_employee_numbers_not_negative() -> None:
@@ -1014,7 +1014,9 @@ def test_employee_numbers_not_negative() -> None:
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
         correct_avg_num_employees = 8
-        assert dict(zip(columns, row))["average_number_employees_during_period"] == correct_avg_num_employees
+        assert (
+            dict(zip(columns, row, strict=True))["average_number_employees_during_period"] == correct_avg_num_employees
+        )
 
 
 def test_employee_numbers_numdotcomma() -> None:
@@ -1041,7 +1043,9 @@ def test_employee_numbers_numdotcomma() -> None:
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
         correct_avg_num_employees = 800
-        assert dict(zip(columns, row))["average_number_employees_during_period"] == correct_avg_num_employees
+        assert (
+            dict(zip(columns, row, strict=True))["average_number_employees_during_period"] == correct_avg_num_employees
+        )
 
 
 def test_date_in_format() -> None:
@@ -1092,7 +1096,7 @@ def test_date_in_format() -> None:
     )
 
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
-        assert tuple(dict(zip(columns, row))["balance_sheet_date"] for row in rows) == (
+        assert tuple(dict(zip(columns, row, strict=True))["balance_sheet_date"] for row in rows) == (
             date.fromisoformat("2023-02-10"),
             date.fromisoformat("2023-02-10"),
             date.fromisoformat("2023-02-10"),
@@ -1121,7 +1125,7 @@ def test_split_date() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
+        assert dict(zip(columns, row, strict=True))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
 def test_date_with_whitespace() -> None:
@@ -1147,7 +1151,7 @@ def test_date_with_whitespace() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
+        assert dict(zip(columns, row, strict=True))["balance_sheet_date"] == date.fromisoformat("2020-02-10")
 
 
 def test_date_with_exclude() -> None:
@@ -1173,7 +1177,7 @@ def test_date_with_exclude() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-07-31")
+        assert dict(zip(columns, row, strict=True))["balance_sheet_date"] == date.fromisoformat("2017-07-31")
 
 
 def test_date_with_incorrect_spelling() -> None:
@@ -1199,7 +1203,7 @@ def test_date_with_incorrect_spelling() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-01-31")
+        assert dict(zip(columns, row, strict=True))["balance_sheet_date"] == date.fromisoformat("2017-01-31")
 
 
 def test_date_with_suffix() -> None:
@@ -1225,7 +1229,7 @@ def test_date_with_suffix() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
+        assert dict(zip(columns, row, strict=True))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
 
 def test_date_with_capitalised_suffix() -> None:
@@ -1251,7 +1255,7 @@ def test_date_with_capitalised_suffix() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
+        assert dict(zip(columns, row, strict=True))["balance_sheet_date"] == date.fromisoformat("2017-03-31")
 
 
 def test_parsing_error_captured_in_error_column() -> None:
@@ -1277,7 +1281,7 @@ def test_parsing_error_captured_in_error_column() -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["error"] == "Unknown string format: 31ABC2018"
+        assert dict(zip(columns, row, strict=True))["error"] == "Unknown string format: 31ABC2018"
 
 
 def test_multi_valued_cell() -> None:
@@ -1317,9 +1321,9 @@ def test_multi_valued_cell() -> None:
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
         correct_cash_bank = 978726
-        assert dict(zip(columns, row))["cash_bank_in_hand"] == correct_cash_bank, dict(zip(columns, row))[
-            "cash_bank_in_hand"
-        ]
+        assert dict(zip(columns, row, strict=True))["cash_bank_in_hand"] == correct_cash_bank, dict(
+            zip(columns, row, strict=True)
+        )["cash_bank_in_hand"]
 
 
 dashes = [
@@ -1366,4 +1370,4 @@ def test_parsing_decimal_dashes(dash: str) -> None:
     )
     with stream_read_xbrl_zip(stream_zip(member_files)) as (columns, rows):
         row = next(iter(rows))
-        assert dict(zip(columns, row))["turnover_gross_operating_revenue"] is None
+        assert dict(zip(columns, row, strict=True))["turnover_gross_operating_revenue"] is None
