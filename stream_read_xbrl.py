@@ -511,14 +511,14 @@ def _xbrl_to_rows(
 
     def tag_name_tests(
         local_name: str,
-    ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]]]:
+    ) -> typing.Generator[tuple[str, int, _TN, collections.abc.Callable[[Element, str], typing.Any]], None, None]:
         tag_name_test = tag_name_test_dict.get(local_name)
         if tag_name_test is not None:
             yield from (tag_name_test,)
 
     def attribute_value_tests(
         attribute_value: str,
-    ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]]]:
+    ) -> typing.Generator[tuple[str, int, _AV, collections.abc.Callable[[Element, str], typing.Any]], None, None]:
         attribute_value_test = attribute_value_test_dict.get(attribute_value)
         if attribute_value_test is not None:
             yield from (attribute_value_test,)
