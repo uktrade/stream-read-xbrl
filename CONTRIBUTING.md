@@ -54,7 +54,7 @@ You should not fork the repository if you're a member of uktrade.
 
 ## Contributing documentation
 
-The source of the documentation is in the [docs/](https://github.com/uktrade/stream-read-xbrl/tree/main/docs) directory of the source code, and is written using [Material for mkdocs](https://squidfunk.github.io/mkdocs-material/).
+The source of the documentation is in the [docs/](https://github.com/uktrade/stream-read-xbrl/tree/main/docs) directory of the source code, and is written using [11ty](https://www.11ty.dev/).
 
 Changes are then submitted via a Pull Request (PR). To do this:
 
@@ -64,7 +64,6 @@ Changes are then submitted via a Pull Request (PR). To do this:
 
     ```bash
     git checkout -b docs/add-example
-    cd stream-read-xbrl
     ```
 
 3. Make your changes in a text editor.
@@ -72,8 +71,8 @@ Changes are then submitted via a Pull Request (PR). To do this:
 4. Preview your changes locally.
 
     ```bash
-    pip install -r requirements-docs.txt  # Only needed once
-    mkdocs serve
+    npm install  # Only needed once
+    npx @11ty/eleventy --serve  # Should serve in http://localhost:8080/
     ```
 
 5. Commit your change and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
@@ -110,14 +109,14 @@ Changes are then submitted via a Pull Request (PR). To do this:
 3. Make sure you can run existing tests locally
 
     ```bash
-    pip install -e ".[dev]"  # Only needed once
-    pytest
+    uv sync  # Only needed once, this should install [dev] requirements
+    uv run pytest
     ```
 
 4. Make your changes in a text editor. In the cases of changing behaviour, this would usually include changing or adding at least one test in [test_stream_read_xbrl.py](https://github.com/uktrade/stream-unzip/blob/main/test_stream_read_xbrl.py), and running them.
 
     ```bash
-    pytest
+    uv run pytest
     ```
 
 5. Commit your changes and push to your fork. Ideally the commit message will follow the [Conventional Commit specification](https://www.conventionalcommits.org/).
