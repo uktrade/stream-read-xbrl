@@ -487,18 +487,29 @@ def _xbrl_to_rows(
         logger.warning("Invalid file. Skipping: %s", fn)
         return ()
     run_code, company_id, date, filetype = map(str, mo.groups())
-    allowed_taxonomies = [
+    # Pre-2014 taxonomies have fixed URLs. From 2014 the FRC publishes a new "core" namespace for each
+    # taxonomy release, so these are matched by pattern rather than listed. Namespaces are collected from all
+    # elements, since inline XBRL documents often declare them on descendants rather than the root
+    legacy_taxonomies = {
         "http://www.xbrl.org/uk/fr/gaap/pt/2004-12-01",
         "http://www.xbrl.org/uk/gaap/core/2009-09-01",
-        "http://xbrl.frc.org.uk/fr/2014-09-01/core",
-    ]
+    }
+    frc_core_taxonomy = re.compile(r"^http://xbrl\.frc\.org\.uk/fr/\d{4}-\d{2}-\d{2}/core$")
 
     core_attributes = (
         run_code,
         company_id,
         _date(date),
         filetype,
-        ";".join(set(allowed_taxonomies) & set(root.nsmap.values())),
+        ";".join(
+            sorted(
+                namespace
+                for namespace in {
+                    namespace for element in root.iter(lxml.etree.Element) for namespace in element.nsmap.values()
+                }
+                if namespace in legacy_taxonomies or (namespace and frc_core_taxonomy.match(namespace))
+            )
+        ),
     )
 
     # Mutable dictionaries to store the "priority" (lower is better) of a found value
